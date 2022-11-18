@@ -6,7 +6,7 @@ DROP TABLE IF EXISTS usuarios;
 
 CREATE TABLE usuarios(
     idusuario       INT NOT NULL AUTO_INCREMENT,
-    idtipousuario   INT UNSIGNED NOT NULL,
+    idtipousuario   INT NOT NULL,
     correo          VARCHAR(100) NOT NULL,
     clave           VARCHAR(100) NOT NULL,
     nombres         VARCHAR(100) DEFAULT NULL,
@@ -22,3 +22,19 @@ CREATE TABLE usuarios(
     PRIMARY KEY (idusuario),
     CONSTRAINT UQ_Usuarios_Correo UNIQUE (correo) 
 );
+
+-- Store Procedures
+DELIMITER //
+CREATE PROCEDURE create_and_return(
+    IN idtipousuario INT,
+    IN correo VARCHAR(100),
+    IN clave VARCHAR(100))
+BEGIN
+    INSERT INTO usuarios(idtipousuario, correo, clave)
+    VALUES (idtipousuario, correo, clave);
+
+    SET @USUARIO_ID = LAST_INSERT_ID();
+
+    SELECT * FROM usuarios WHERE idusuario=@USUARIO_ID;
+END //
+DELIMITER;

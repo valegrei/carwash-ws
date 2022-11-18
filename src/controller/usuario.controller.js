@@ -27,13 +27,14 @@ export const getUsuarios = (req, res) => {
 
 export const createUsuario = (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, creando usuario`);
-    database.query(QUERY.CREATE_USUARIO, Object.values(req.body), (error, results) => {
+    database.query(QUERY.CREATE_USUARIO_PROCEDURE, Object.values(req.body), (error, results) => {
         if(!results){
             logger.error(error.message);
             res.status(HttpStatus.INTERNAL_SERVER_ERROR.code)
             .send(new Response(HttpStatus.INTERNAL_SERVER_ERROR.code, HttpStatus.INTERNAL_SERVER_ERROR.status, `Ocurrio un error`));
         } else {
-            const usuario = {id: results.insertedId, ...req.body, created_at: new Date() };
+            //const usuario = {id: results.insertedId, ...req.body, created_at: new Date() };
+            const usuario = results[0][0];
             res.status(HttpStatus.CREATED.code)
             .send(new Response(HttpStatus.CREATED.code, HttpStatus.CREATED.status, `Usuario creado`, {usuario}));
         }
@@ -44,7 +45,7 @@ export const createUsuario = (req, res) => {
 export const getUsuario = (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, obteniendo usuario`);
     database.query(QUERY.SELECT_USUARIO, [req.params.id], (error, results) => {
-        if(!results[0]){
+        if (!results[0]) {
             res.status(HttpStatus.NOT_FOUND.code)
             .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, `Usuario por id ${req.params.id} no fue encontrado`));
         } else {
