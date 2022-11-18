@@ -24,6 +24,7 @@ services:
     container_name: nodeappcontainer
     build: .
     image: nodeapp:1.0
+    restart: unless-stopped
     env_file: ./.env
     ports:
       - $NODE_LOCAL_PORT:$NODE_DOCKER_PORT
