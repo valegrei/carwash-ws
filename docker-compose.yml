@@ -26,6 +26,8 @@ services:
     image: nodeapp:1.0
     restart: unless-stopped
     env_file: ./.env
+    volumes:
+      - ../code:/code
     ports:
       - $NODE_LOCAL_PORT:$NODE_DOCKER_PORT
     environment:
