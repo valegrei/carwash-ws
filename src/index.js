@@ -8,12 +8,22 @@ import authRoutes from './route/auth.routes.js';
 import usuarioRoutes from './route/usuario.route.js';
 import logger from './util/logger.js';
 import { expressjwt } from "express-jwt";
+import db from './models'
 
 dotenv.config();
 const PORT = process.env.SERVER_PORT || 3000;
 const app = express();
 app.use(cors({origin: '*'}));
 app.use(express.json());
+
+//Inicializa Sequelize
+db.sequelize.sync() //sync({ force: true }) "Drop and re-sync db."
+    .then(() => {
+        logger.info('Synced db.');
+    })
+    .catch((err) => {
+        logger.error(err,`Failed to sync db: ${err.message}`);
+    });
 
 //Jwt middleware
 app.use('/api',
