@@ -1,4 +1,5 @@
 import { DataTypes, Model } from "sequelize";
+import db from "./index.js";
 
 class TipoDocumento extends Model{}
 
@@ -19,6 +20,7 @@ TipoDocumento.init({
         defaultValue: 1
     }
 }, {
+    sequelize: db.sequelize,
     timestamps: false
 });
 

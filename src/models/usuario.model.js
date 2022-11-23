@@ -1,6 +1,7 @@
 import { DataTypes, Model } from "sequelize";
-import TipoDocumento from "./tipo.documento.model";
-import TipoUsuario from "./tipo.usuario.model";
+import TipoDocumento from "./tipo.documento.model.js";
+import TipoUsuario from "./tipo.usuario.model.js";
+import db from "./index.js";
 
 class Usuario extends Model{}
 
@@ -62,6 +63,8 @@ Usuario.init({
             key: 'id'
         }
     }
+},{
+    sequelize: db.sequelize
 });
 
 export default Usuario;

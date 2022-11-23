@@ -1,4 +1,5 @@
 import { DataTypes, Model } from "sequelize";
+import db from "./index.js";
 
 class TipoUsuario extends Model{}
 
@@ -16,6 +17,7 @@ TipoUsuario.init({
         defaultValue: 1
     }
 }, {
+    sequelize: db.sequelize,
     timestamps: false
 });
 

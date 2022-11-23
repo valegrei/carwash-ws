@@ -1,7 +1,5 @@
-import database from '../config/mysql.config.js';
 import Response from '../domain/response.js';
 import logger from '../util/logger.js';
-import QUERY from '../query/auth.query.js';
 import jwt from 'jsonwebtoken';
 import HttpStatus from '../util/http.status.js';
 import dotenv from 'dotenv'
@@ -9,7 +7,7 @@ import dotenv from 'dotenv'
 dotenv.config();
 
 export const login = (req, res) => {
-    logger.info(`${req.method} ${req.originalUrl}, Iniciando sesion`);
+    /*logger.info(`${req.method} ${req.originalUrl}, Iniciando sesion`);
     database.query(QUERY.SELECT_USUARIO, [req.body.correo], (error, results) => {
         if(!results){
             //No hay correo registrado
@@ -42,5 +40,5 @@ export const login = (req, res) => {
                 .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Clave incorrecta`));
             }
         }
-    });
+    });*/
 };

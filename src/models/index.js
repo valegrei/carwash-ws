@@ -18,10 +18,9 @@ const sequelize = new Sequelize(
     }
 );
 
-const db = {};
-
-db.Sequelize = Sequelize;
-db.sequelize = sequelize;
-
+const db = {
+    sequelize: sequelize
+};
 
 export default db;
+//module.exports = db;

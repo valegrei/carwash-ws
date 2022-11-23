@@ -8,7 +8,10 @@ import authRoutes from './route/auth.routes.js';
 import usuarioRoutes from './route/usuario.route.js';
 import logger from './util/logger.js';
 import { expressjwt } from "express-jwt";
-import db from './models'
+import db from './models/index.js'
+import TipoDocumento from './models/tipo.documento.model.js'
+import TipoUsuario from './models/tipo.usuario.model.js'
+import Usuario from './models/usuario.model.js'
 
 dotenv.config();
 const PORT = process.env.SERVER_PORT || 3000;
@@ -17,13 +20,8 @@ app.use(cors({origin: '*'}));
 app.use(express.json());
 
 //Inicializa Sequelize
-db.sequelize.sync() //sync({ force: true }) "Drop and re-sync db."
-    .then(() => {
-        logger.info('Synced db.');
-    })
-    .catch((err) => {
-        logger.error(err,`Failed to sync db: ${err.message}`);
-    });
+await db.sequelize.sync({ force: true }); //sync({ force: true }) "Drop and re-sync db."
+logger.info('Todos los modelos fueron sincronizados con exito!');
 
 //Jwt middleware
 app.use('/api',
