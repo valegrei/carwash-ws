@@ -1,15 +1,15 @@
-import express from 'express';
-import ip from 'ip';
-import dotenv from 'dotenv';
-import cors from 'cors';
-import Response from './domain/response.js'
-import HttpStatus from './util/http.status.js';
-import authRoutes from './route/auth.routes.js';
-import usuarioRoutes from './route/usuario.route.js';
-import logger from './util/logger.js';
-import db from './models/index.js';
-import initData from './models/init.data.js';
-import jwtMiddleware from './middleware/jwt.middleware.js';
+const express = require('express');
+const ip = require('ip');
+const dotenv = require('dotenv');
+const cors = require('cors');
+const Response = require('./domain/response');
+const HttpStatus = require('./util/http.status');
+const authRoutes = require('./route/auth.routes');
+const usuarioRoutes = require('./route/usuario.route');
+const logger = require('./util/logger');
+const db = require('./models');
+const initData = require('./models/init.data');
+const jwtMiddleware = require('./middleware/jwt.middleware');
 
 dotenv.config();
 const PORT = process.env.SERVER_PORT || 3000;

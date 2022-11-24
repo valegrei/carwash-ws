@@ -1,5 +1,5 @@
-import dotenv from 'dotenv';
-import { expressjwt } from "express-jwt";
+const dotenv = require('dotenv');
+const {expressjwt} = require('express-jwt');
 
 dotenv.config();
 
@@ -10,4 +10,4 @@ const jwtMiddleware = expressjwt({
     audience: process.env.JWT_AUDIENCE
 });
 
-export default jwtMiddleware;
+module.exports = jwtMiddleware;

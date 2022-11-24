@@ -1,7 +1,7 @@
-import TipoDocumento from './tipo.documento.model.js';
-import TipoUsuario from './tipo.usuario.model.js';
-import Usuario from './usuario.model.js';
-import logger from '../util/logger.js';
+const TipoDocumento = require('./tipo.documento.model');
+const TipoUsuario = require('./tipo.usuario.model');
+const Usuario = require('./usuario.model');
+const logger = require('../util/logger');
 
 const initData = async () => {
     logger.info('Cargando datos iniciales en BD...');
@@ -61,4 +61,4 @@ const initData = async () => {
     logger.info('Datos de Usuario cargados');
 };
 
-export default initData;
+module.exports = initData;

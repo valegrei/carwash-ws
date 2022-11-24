@@ -1,7 +1,7 @@
-import { DataTypes, Model } from "sequelize";
-import TipoDocumento from "./tipo.documento.model.js";
-import TipoUsuario from "./tipo.usuario.model.js";
-import db from "./index.js";
+const { DataTypes, Model } = require('sequelize');
+const TipoDocumento = require('./tipo.documento.model');
+const TipoUsuario = require('./tipo.usuario.model'); 
+const db = require('.');
 
 class Usuario extends Model{}
 
@@ -68,4 +68,4 @@ Usuario.init({
     sequelize: db.sequelize
 });
 
-export default Usuario;
+module.exports = Usuario;

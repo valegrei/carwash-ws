@@ -1,15 +1,15 @@
-import Response from '../domain/response.js';
-import logger from '../util/logger.js';
-import jwt from 'jsonwebtoken';
-import HttpStatus from '../util/http.status.js';
-import dotenv from 'dotenv';
-import isEmail from 'validator/lib/isEmail.js';
-//import Usuario from '../models/usuario.model.js';
-import crypto from 'crypto';
+const Response = require('../domain/response');
+const logger = require('../util/logger');
+const jwt = require('jsonwebtoken');
+const HttpStatus = require('../util/http.status');
+const dotenv = require('dotenv');
+const isEmail = require('validator/lib/isEmail');
+//const Usuario = require('../models/usuario.model');
+const crypto = require('crypto');
 
 dotenv.config();
 
-export const login = async (req, res) => {
+const login = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, Iniciando sesion`);
 
     let correo = req.body.correo;
@@ -59,6 +59,8 @@ export const login = async (req, res) => {
     }
 };
 
-export const signUp = (req, res) => {
+const signUp = (req, res) => {
 
 };
+
+module.exports = {login, signUp};

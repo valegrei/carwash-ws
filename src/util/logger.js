@@ -1,4 +1,4 @@
-import logger from 'pino'
+const logger = require('pino');
 
 const log = logger({
     base: {pid: false},
@@ -11,4 +11,4 @@ const log = logger({
     timestamp: () => `,"time": "${new Date().toLocaleString}"`
 });
 
-export default log;
+module.exports = log;

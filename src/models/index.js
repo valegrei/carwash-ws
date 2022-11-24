@@ -1,5 +1,5 @@
-import dbConfig from '../config/db.config.js';
-import Sequelize from 'sequelize';
+const dbConfig = require('../config/db.config');
+const Sequelize = require('sequelize');
 
 const sequelize = new Sequelize(
     dbConfig.DB,
@@ -22,4 +22,4 @@ const db = {};
 
 db.sequelize = sequelize;
 
-export default db;
+module.exports = db;

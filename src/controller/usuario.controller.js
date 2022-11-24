@@ -1,8 +1,8 @@
-import Response from '../domain/response.js';
-import logger from '../util/logger.js';
-import HttpStatus from '../util/http.status.js';
+const Response = require('../domain/response');
+const logger = require('../util/logger');
+const HttpStatus = require('../util/http.status');
 
-export const getUsuarios = (req, res) => {
+const getUsuarios = (req, res) => {
     /*logger.info(`${req.method} ${req.originalUrl}, listando usuarios`);
     database.query(QUERY.SELECT_USUARIOS, (error, results) => {
         if(!results){
@@ -15,7 +15,7 @@ export const getUsuarios = (req, res) => {
     });*/
 };
 
-export const createUsuario = (req, res) => {
+const createUsuario = (req, res) => {
     /*logger.info(`${req.method} ${req.originalUrl}, creando usuario`);
     database.query(QUERY.CREATE_USUARIO_PROCEDURE, Object.values(req.body), (error, results) => {
         if(!results){
@@ -32,7 +32,7 @@ export const createUsuario = (req, res) => {
 };
 
 
-export const getUsuario = (req, res) => {
+const getUsuario = (req, res) => {
     /*logger.info(`${req.method} ${req.originalUrl}, obteniendo usuario`);
     database.query(QUERY.SELECT_USUARIO, [req.params.id], (error, results) => {
         if (!results[0]) {
@@ -45,7 +45,7 @@ export const getUsuario = (req, res) => {
     });*/
 };
 
-export const updateUsuario = (req, res) => {
+const updateUsuario = (req, res) => {
     /*logger.info(`${req.method} ${req.originalUrl}, actualizando usuario`);
     database.query(QUERY.SELECT_USUARIO, [req.params.id], (error, results) => {
         if(!results[0]){
@@ -67,7 +67,7 @@ export const updateUsuario = (req, res) => {
     });*/
 };
 
-export const deleteUsuario = (req, res) => {
+const deleteUsuario = (req, res) => {
     /*logger.info(`${req.method} ${req.originalurl}, eliminando usuario`);
     database.query(QUERY.DELETE_USUARIOS, [req.params.id], (error, results) => {
         if(results.affectedReows > 0){
@@ -79,3 +79,5 @@ export const deleteUsuario = (req, res) => {
         }
     });*/
 };
+
+module.exports = {getUsuarios, getUsuario, createUsuario, updateUsuario, deleteUsuario};

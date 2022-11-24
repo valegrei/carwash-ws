@@ -1,5 +1,5 @@
-import { DataTypes, Model } from "sequelize";
-import db from "./index.js";
+const { DataTypes, Model } = require('sequelize');
+const db = require('.');
 
 class TipoUsuario extends Model{}
 
@@ -21,4 +21,4 @@ TipoUsuario.init({
     timestamps: false
 });
 
-export default TipoUsuario;
+module.exports = TipoUsuario;
