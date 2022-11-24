@@ -7,11 +7,9 @@ import HttpStatus from './util/http.status.js';
 import authRoutes from './route/auth.routes.js';
 import usuarioRoutes from './route/usuario.route.js';
 import logger from './util/logger.js';
-import { expressjwt } from "express-jwt";
-import db from './models/index.js'
-import TipoDocumento from './models/tipo.documento.model.js'
-import TipoUsuario from './models/tipo.usuario.model.js'
-import Usuario from './models/usuario.model.js'
+import db from './models/index.js';
+import initData from './models/init.data.js';
+import jwtMiddleware from './middleware/jwt.middleware.js';
 
 dotenv.config();
 const PORT = process.env.SERVER_PORT || 3000;
@@ -20,18 +18,12 @@ app.use(cors({origin: '*'}));
 app.use(express.json());
 
 //Inicializa Sequelize
-await db.sequelize.sync({ force: true }); //sync({ force: true }) "Drop and re-sync db."
-logger.info('Todos los modelos fueron sincronizados con exito!');
-
+db.sequelize.sync({ force: true }).then(()=>{ //sync({ force: true }) "Drop and re-sync db."
+    logger.info('Todos los modelos fueron sincronizados con exito!');
+    initData();
+});
 //Jwt middleware
-app.use('/api',
-    expressjwt({
-      secret: process.env.TOKEN_SECRET,
-      algorithms: ["HS256"],
-      issuer: 'http://carwashperuapp.com/ws',
-      audience: 'htpp://carwashperuapp.com/app'
-    })
-);
+app.use('/api',jwtMiddleware);
 //demas reglas
 app.use('/auth', authRoutes);
 app.use('/api/usuarios', usuarioRoutes);

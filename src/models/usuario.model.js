@@ -43,7 +43,8 @@ Usuario.init({
         type: DataTypes.STRING(20)
     },
     verificado: {
-        type: DataTypes.BOOLEAN
+        type: DataTypes.BOOLEAN,
+        defaultValue: 0
     },
     estado: {
         type: DataTypes.BOOLEAN,
