@@ -1,6 +1,7 @@
 const TipoDocumento = require('./tipo.documento.model');
 const TipoUsuario = require('./tipo.usuario.model');
 const Usuario = require('./usuario.model');
+const CodigoVerificacion = require('./codigo.verificacion.model');
 const logger = require('../util/logger');
 
 const initData = async () => {
@@ -45,7 +46,7 @@ const initData = async () => {
             idTipoUsuario: 2,
             idTipoDocumento: 1
         },
-        {
+        /*{
             id: 3,
             correo: 'valegrei@outlook.com',
             clave: '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92',
@@ -54,7 +55,7 @@ const initData = async () => {
             apellidoMaterno: 'Ibáñez',
             idTipoUsuario: 3,
             idTipoDocumento: 2
-        }
+        }*/
     ],{
         ignoreDuplicates: true
     });

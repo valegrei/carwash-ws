@@ -8,4 +8,9 @@ class Response {
     }
 }
 
-module.exports = Response;
+const response = (res, httpStatus, msg, data) => {
+    res.status(httpStatus.code)
+    .send(new Response(httpStatus.code, httpStatus.status, msg, data));
+};
+
+module.exports = {Response, response};

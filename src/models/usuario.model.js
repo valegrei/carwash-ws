@@ -42,13 +42,20 @@ Usuario.init({
     nroCel2: {
         type: DataTypes.STRING(20)
     },
+    distAct: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: 0
+    },
     verificado: {
         type: DataTypes.BOOLEAN,
+        allowNulls: false,
         defaultValue: 0
     },
     estado: {
         type: DataTypes.BOOLEAN,
-        defaultValue: 1
+        defaultValue: 1,
+        allowNulls: false
     },
     idTipoUsuario: {
         type: DataTypes.INTEGER,

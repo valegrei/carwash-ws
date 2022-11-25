@@ -2,7 +2,7 @@ const express = require('express');
 const ip = require('ip');
 const dotenv = require('dotenv');
 const cors = require('cors');
-const Response = require('./domain/response');
+const {response} = require('./domain/response');
 const HttpStatus = require('./util/http.status');
 const authRoutes = require('./route/auth.routes');
 const usuarioRoutes = require('./route/usuario.route');
@@ -27,13 +27,11 @@ app.use('/api',jwtMiddleware);
 //demas reglas
 app.use('/auth', authRoutes);
 app.use('/api/usuarios', usuarioRoutes);
-app.get('/', (req, res) => res.send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, 'Carwash API, v1.0.0 - All Systems Go')));
-app.use('*', (req, res) => res.status(HttpStatus.NOT_FOUND.code)
-    .send(new Response(HttpStatus.NOT_FOUND.code, HttpStatus.NOT_FOUND.status, 'La ruta no existe')));
+app.get('/', (req, res) => response(res, HttpStatus.OK, 'Carwash API, v1.0.0 - All Systems Go'));
+app.use('*', (req, res) => response(res, HttpStatus.NOT_FOUND, 'La ruta no existe'));
 app.use(function (err, req, res, next) {    //Manejar error de token invalido
     if (err.name === "UnauthorizedError") {
-        res.status(HttpStatus.UNAUTHORIZED.code)
-        .send(new Response(HttpStatus.UNAUTHORIZED.code, HttpStatus.UNAUTHORIZED.status, 'Token invalido'));
+        response(res, HttpStatus.UNAUTHORIZED.status, 'Token invalido');
     } else {
         next(err);
     }

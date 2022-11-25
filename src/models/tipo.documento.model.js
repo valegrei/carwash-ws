@@ -17,7 +17,8 @@ TipoDocumento.init({
     },
     estado: {
         type: DataTypes.BOOLEAN,
-        defaultValue: 1
+        defaultValue: 1,
+        allowNulls: false
     }
 }, {
     sequelize: db.sequelize,

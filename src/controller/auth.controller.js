@@ -1,41 +1,42 @@
-const Response = require('../domain/response');
+const {response} = require('../domain/response');
 const logger = require('../util/logger');
 const jwt = require('jsonwebtoken');
 const HttpStatus = require('../util/http.status');
 const dotenv = require('dotenv');
-const isEmail = require('validator/lib/isEmail');
-//const Usuario = require('../models/usuario.model');
+const Validator = require('validatorjs');
 const crypto = require('crypto');
+const {enviarCorreo} = require('../util/mail');
+const {Op} = require('sequelize');
 
 dotenv.config();
+//Validator.useLang('es');
 
 const login = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, Iniciando sesion`);
 
-    let correo = req.body.correo;
-    let clave = req.body.clave;
-    //Validando request body
-    if(!correo || !isEmail(correo)){
-        res.status(HttpStatus.OK.code)
-        .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Correo no válido.`));
-        return;
-    }
-    if(!clave){
-        res.status(HttpStatus.OK.code)
-        .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Contraseña vacía.`));
+    //Validamos
+    let validator = new Validator(req.body,{
+        correo: 'required|email',
+        clave: 'required|string'
+    });
+    if(validator.fails()){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
         return;
     }
 
+    let {correo, clave} = req.body;
+
     //Consultamos a BD
+    const Usuario = require('../models/usuario.model');
     const usuario = await Usuario.findOne({ where: {correo: correo}});
     if(!usuario){
         //No hay correo registrado
-        res.status(HttpStatus.OK.code)
-        .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Correo no registrado.`));
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Correo no registrado.`);
         return;
     }
-    if(usuario.clave === crypto.createHmac('sha256', clave)){
+    if(usuario.clave === sha256(clave)){
         //Se comprueba si la clave es correcta
+        usuario.clave = null;
         let exp = Math.floor(Date.now() / 1000) + (60 * 60);
         let expDate = (new Date(exp*1000)).toISOString();
         let token = jwt.sign({
@@ -46,21 +47,161 @@ const login = async (req, res) => {
             issuer: process.env.JWT_ISSUER,
             audience: process.env.JWT_AUDIENCE
         });
-        res.status(HttpStatus.OK.code)
-        .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Sesión iniciada`, {
+        response(res,HttpStatus.OK,`Sesión iniciada`, {
             exp: expDate,
             usuario: usuario,
             jwt: token
-        }));
+        });
     }else{
         //Clave incorrecta
-        res.status(HttpStatus.OK.code)
-        .send(new Response(HttpStatus.OK.code, HttpStatus.OK.status, `Clave incorrecta`));
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Clave incorrecta`);
     }
 };
 
-const signUp = (req, res) => {
+const signUp = async (req, res) => {
+    logger.info(`${req.method} ${req.originalUrl}, Registrando`);
+
+    let validator = new Validator(req.body, {
+        correo: 'required|email',
+        clave: 'required|string',
+        nombres: 'required|string',
+        apellidoPaterno: 'required|string',
+        apellidoMaterno: 'required|string',
+        razonSocial: 'string',
+        nroDocumento: 'required|numeric',
+        nroCel1: 'string',
+        nroCel2: 'string',
+        idTipoUsuario: 'required|integer',
+        idTipoDocumento: 'required|integer',
+    });
+    if(validator.fails()){
+        logger.info(validator.errors.all());
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
+        return;
+    }
+
+    let data = {
+        correo: req.body.correo,
+        clave: sha256(req.body.clave),
+        nombres: req.body.nombres,
+        apellidoPaterno: req.body.apellidoPaterno,
+        apellidoMaterno: req.body.apellidoMaterno,
+        razonSocial: req.body.razonSocial,
+        nroDocumento: req.body.nroDocumento,
+        nroCel1: req.body.nroCel1,
+        nroCel2: req.body.nroCel2,
+        idTipoUsuario: req.body.idTipoUsuario,
+        idTipoDocumento: req.body.idTipoDocumento
+    };
+
+    //Comprobar si correo ya existe
+    const Usuario = require('../models/usuario.model');
+    const usuExist = await Usuario.findOne({where:{correo: data.correo}});
+    if(usuExist){
+        //Si existe usuario ya registrado
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Correo ya registrado.`);
+        return;
+    }
+    //Procede a insertar usuario
+    Usuario.create(data)
+    .then(async nuevoUsuario => {
+        let {id, correo, nombres, apellidoPaterno, idTipoUsuario} = nuevoUsuario;
+        logger.info(`Usuario: ${correo}, id: ${id}`);
+        //Se genera un codigo de 6 digitos para validar correo
+        const CodigoVerificacion = require('../models/codigo.verificacion.model');
+        let codigo = generarCodigo();
+        let exp = Date.now() + 300000; //expira en 5 min
+        await CodigoVerificacion.create({codigo: codigo, exp: exp, idUsuario: id});
+        enviarCorreo(correo,`Código de verificación: ${codigo}`,`Estimado/a ${nombres} ${apellidoPaterno}:\nSe generó el siguiente código para verificar su correo\n\n${codigo}\n\nPor favor introducirlo en la aplicación antes que expire.`);
+        
+        //TODO: Si el tipo de usuario creado es Distribuidor, comunicar a los administradores para su activacion
+
+        response(res,HttpStatus.OK,`Usuario registrado, se envió código de verificación a su correo.`, nuevoUsuario);
+        return;
+    }).catch(error => {
+        logger.error(error);
+        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error interno al guardar usuario.`);
+        return;
+    });
+};
+
+const confirmarCorreo = async (req, res) => {
+    let validator = new Validator(req.body, {
+        id: 'required|integer',
+        codigo: 'required|integer'
+    });
+    if(validator.fails()){
+        logger.info(validator.errors.all());
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
+        return;
+    }
+
+    let {id, codigo} = req.body;
+
+    //Consultamos por codigo vigente
+    const CodigoVerificacion = require('../models/codigo.verificacion.model');
+    const Usuario = require('../models/usuario.model');
+    let codigoActual = await CodigoVerificacion.findOne({
+        where: {
+            idUsuario: id, 
+            codigo: codigo,
+            exp: {
+                [Op.gt]: Date.now()
+            },
+            estado: 1
+        }
+    });
+    if(codigoActual){
+        //Codigo valido, se procede a confirmar
+        codigoActual.estado = 0;
+        await codigoActual.save();
+
+        let usuarioConfirmar = await Usuario.findOne({where:{id:id}});
+        usuarioConfirmar.verificado = 1;
+        usuarioConfirmar.save();
+
+        //Se genera nuevo token para sesion
+        usuarioConfirmar.clave = null;
+        let exp = Math.floor(Date.now() / 1000) + (60 * 60);
+        let expDate = (new Date(exp*1000)).toISOString();
+        let token = jwt.sign({
+            exp: exp,
+            data: usuarioConfirmar
+        }, process.env.TOKEN_SECRET,{
+            algorithm: 'HS256',
+            issuer: process.env.JWT_ISSUER,
+            audience: process.env.JWT_AUDIENCE
+        });
+        response(res,HttpStatus.OK,`Correo confirmado. Sesión iniciada.`, {
+            exp: expDate,
+            usuario: usuarioConfirmar,
+            jwt: token
+        });
+    }else{
+        //No hay codigo
+        response(res,HttpStatus.NOT_FOUND,`Código inválido.`);
+        return;
+    }
+};
+
+const solicitarCodigoConfirmacion = (req, res) => {
 
 };
 
-module.exports = {login, signUp};
+const solicitarCodigoNuevaClave = (req, res) => {
+
+};
+
+const cambiarClave = (req, res) => {
+
+};
+
+const sha256 = (secret) => {
+    return crypto.createHash('sha256').update(secret).digest('hex');
+};
+
+const generarCodigo = () => {
+    return Math.floor(100000 + Math.random() * 900000);
+}
+
+module.exports = {login, signUp, confirmarCorreo, solicitarCodigoConfirmacion, solicitarCodigoNuevaClave, cambiarClave};

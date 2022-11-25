@@ -8,7 +8,7 @@ const log = logger({
             colorized: true
         }
     },
-    timestamp: () => `,"time": "${new Date().toLocaleString}"`
+    timestamp: () => `,"time": "${new Date().toLocaleString()}"`
 });
 
 module.exports = log;
