@@ -1,5 +1,5 @@
 const express = require('express');
-const {login, signUp, confirmarCorreo} = require('../controller/auth.controller');
+const {login, signUp, confirmarCorreo,solicitarCodigoVerificacion, solicitarCodigoNuevaClave, cambiarClave} = require('../controller/auth.controller');
 
 const authRoutes = express.Router();
 
@@ -11,5 +11,14 @@ authRoutes.route('/signup')
 
 authRoutes.route('/verify')
     .post(confirmarCorreo);
+
+authRoutes.route('/verify/code')
+    .post(solicitarCodigoVerificacion);
+
+authRoutes.route('/renew/code')
+    .post(solicitarCodigoNuevaClave);
+    
+authRoutes.route('/renew')
+    .post(cambiarClave);
 
 module.exports = authRoutes;

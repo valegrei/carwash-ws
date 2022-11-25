@@ -34,18 +34,24 @@ const login = async (req, res) => {
         response(res,HttpStatus.UNPROCESABLE_ENTITY,`Correo no registrado.`);
         return;
     }
-    if(usuario.clave === sha256(clave)){
-        //Se comprueba si la clave es correcta
-        usuario.clave = null;
-        let {expDate, token} = generarToken(usuario);
-        response(res,HttpStatus.OK,`Sesión iniciada`, {
-            exp: expDate,
-            usuario: usuario,
-            jwt: token
-        });
+    if(usuario.clave === sha256(clave)){//Se comprueba si la clave es correcta
+        if(usuario.verificado){
+            usuario.clave = null;
+            let {expDate, token} = generarToken(usuario);
+            response(res,HttpStatus.OK,`Sesión iniciada.`, {
+                exp: expDate,
+                usuario: usuario,
+                jwt: token
+            });
+        }else{
+            response(res,HttpStatus.OK,`Verificación pendiente.`, {
+                usuario: usuario
+            });
+        }
+        
     }else{
         //Clave incorrecta
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Clave incorrecta`);
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Clave incorrecta.`);
     }
 };
 
@@ -105,7 +111,7 @@ const signUp = async (req, res) => {
         
         //TODO: Si el tipo de usuario creado es Distribuidor, comunicar a los administradores para su activacion
 
-        response(res,HttpStatus.OK,`Usuario registrado, se envió código de verificación a su correo.`, nuevoUsuario);
+        response(res,HttpStatus.OK,`Usuario registrado, se envió código de verificación a su correo.`, { usuario: nuevoUsuario});
         return;
     }).catch(error => {
         logger.error(error);
@@ -163,7 +169,38 @@ const confirmarCorreo = async (req, res) => {
     }
 };
 
-const solicitarCodigoConfirmacion = async (req, res) => {
+const solicitarCodigoVerificacion = async (req, res) => {
+    let validator = new Validator(req.body,{
+        id: 'required|integer'
+    });
+    if(validator.fails){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
+        return;
+    }
+
+    let id = req.body.id;
+
+    //Consultamos a BD
+    const Usuario = require('../models/usuario.model');
+    const usuario = await Usuario.findOne({ where: {id: id}});
+    if(!usuario){
+        //No hay correo registrado
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo no registrado.');
+        return;
+    }else{
+        let {correo, nombres, apellidoPaterno} = usuario;
+        //Se genera un codigo de 6 digitos para validar correo
+        const CodigoVerificacion = require('../models/codigo.verificacion.model');
+        let codigo = generarCodigo();
+        let exp = Date.now() + 300000; //expira en 5 min
+        await CodigoVerificacion.create({codigo: codigo, exp: exp, idUsuario: id});
+        enviarCorreo(correo, contentVerificacion.subject.format(codigo), contentVerificacion.body.format(nombres, apellidoPaterno, codigo));
+        
+        response(res,HttpStatus.OK,'Se envió código de verificación a su correo.');
+    }
+};
+
+const solicitarCodigoNuevaClave = async (req, res) => {
     let validator = new Validator(req.body,{
         correo: 'required|email'
     });
@@ -184,21 +221,70 @@ const solicitarCodigoConfirmacion = async (req, res) => {
     }else{
         let {id, nombres, apellidoPaterno} = usuario;
         //Se genera un codigo de 6 digitos para validar correo
-        const CodigoVerificacion = require('../models/codigo.verificacion.model');
+        const CodigoRenuevaClave = require('../models/codigo.renovar.clave.model');
         let codigo = generarCodigo();
         let exp = Date.now() + 300000; //expira en 5 min
-        await CodigoVerificacion.create({codigo: codigo, exp: exp, idUsuario: id});
-        enviarCorreo(correo, contentVerificacion.subject.format(codigo), contentVerificacion.body.format(nombres, apellidoPaterno, codigo));
+        await CodigoRenuevaClave.create({codigo: codigo, exp: exp, idUsuario: id});
+        enviarCorreo(correo, contentNuevaClave.subject.format(codigo), contentNuevaClave.body.format(nombres, apellidoPaterno, codigo));
         
-        response(res,HttpStatus.OK,'Se envió código de verificación a su correo.');
+        response(res,HttpStatus.OK,'Se envió código para renovar clave.');
     }
 };
 
-const solicitarCodigoNuevaClave = (req, res) => {
+const cambiarClave = async (req, res) => {
+    let validator = new Validator(req.body,{
+        correo: 'required|email',
+        clave: 'required|string',
+        codigo: 'required|integer'
+    });
+    if(validator.fails()){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
+        return;
+    }
 
-};
+    let {correo, clave, codigo} = req.body;
 
-const cambiarClave = (req, res) => {
+    const Usuario = require('../models/usuario.model');
+    const CodigoRenuevaClave = require('../models/codigo.renovar.clave.model');
+
+    let usuario = await Usuario.findOne({where: {correo: correo}});
+
+    if(!usuario){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo no registrado.');
+        return;
+    }else{
+        let id = usuario.id;
+        let codigoRenueva = CodigoRenuevaClave.findOne({
+            where: {
+                idUsuario: id, 
+                codigo: codigo,
+                exp: {
+                    [Op.gt]: Date.now()
+                },
+                estado: 1
+            }
+        })
+        if(!codigoRenueva){
+            response(res,HttpStatus.UNPROCESABLE_ENTITY,'Código inválido.');
+            return;
+        }else{
+            //cambia clave
+            usuario.clave = sha256(clave);
+            await usuario.save();
+
+            codigoRenueva.estado = 0;
+            await codigoRenueva.save();
+
+            //se genera nuevo token para iniciar sesion
+            usuario.clave = null;
+            let {expDate, token} = generarToken(usuario);
+            response(res,HttpStatus.OK,`Clave renovada. Sesión iniciada.`, {
+                exp: expDate,
+                usuario: usuario,
+                jwt: token
+            });
+        }
+    }
 
 };
 
@@ -225,4 +311,4 @@ const generarToken = (usuario) => {
     return {expDate, token};
 }
 
-module.exports = {login, signUp, confirmarCorreo, solicitarCodigoConfirmacion, solicitarCodigoNuevaClave, cambiarClave};
+module.exports = {login, signUp, confirmarCorreo, solicitarCodigoVerificacion, solicitarCodigoNuevaClave, cambiarClave};
