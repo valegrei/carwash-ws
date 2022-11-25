@@ -2,6 +2,7 @@ const TipoDocumento = require('./tipo.documento.model');
 const TipoUsuario = require('./tipo.usuario.model');
 const Usuario = require('./usuario.model');
 const CodigoVerificacion = require('./codigo.verificacion.model');
+const CodigoRenuevaClave = require('./codigo.renovar.clave.model copy');
 const logger = require('../util/logger');
 
 const initData = async () => {

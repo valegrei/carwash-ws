@@ -5,7 +5,7 @@ const HttpStatus = require('../util/http.status');
 const dotenv = require('dotenv');
 const Validator = require('validatorjs');
 const crypto = require('crypto');
-const {enviarCorreo} = require('../util/mail');
+const {enviarCorreo, contentVerificacion, contentNuevaClave} = require('../util/mail');
 const {Op} = require('sequelize');
 
 dotenv.config();
@@ -37,16 +37,7 @@ const login = async (req, res) => {
     if(usuario.clave === sha256(clave)){
         //Se comprueba si la clave es correcta
         usuario.clave = null;
-        let exp = Math.floor(Date.now() / 1000) + (60 * 60);
-        let expDate = (new Date(exp*1000)).toISOString();
-        let token = jwt.sign({
-            exp: exp,
-            data: usuario
-        }, process.env.TOKEN_SECRET,{
-            algorithm: 'HS256',
-            issuer: process.env.JWT_ISSUER,
-            audience: process.env.JWT_AUDIENCE
-        });
+        let {expDate, token} = generarToken(usuario);
         response(res,HttpStatus.OK,`Sesión iniciada`, {
             exp: expDate,
             usuario: usuario,
@@ -75,7 +66,6 @@ const signUp = async (req, res) => {
         idTipoDocumento: 'required|integer',
     });
     if(validator.fails()){
-        logger.info(validator.errors.all());
         response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
         return;
     }
@@ -106,13 +96,12 @@ const signUp = async (req, res) => {
     Usuario.create(data)
     .then(async nuevoUsuario => {
         let {id, correo, nombres, apellidoPaterno, idTipoUsuario} = nuevoUsuario;
-        logger.info(`Usuario: ${correo}, id: ${id}`);
         //Se genera un codigo de 6 digitos para validar correo
         const CodigoVerificacion = require('../models/codigo.verificacion.model');
         let codigo = generarCodigo();
         let exp = Date.now() + 300000; //expira en 5 min
         await CodigoVerificacion.create({codigo: codigo, exp: exp, idUsuario: id});
-        enviarCorreo(correo,`Código de verificación: ${codigo}`,`Estimado/a ${nombres} ${apellidoPaterno}:\nSe generó el siguiente código para verificar su correo\n\n${codigo}\n\nPor favor introducirlo en la aplicación antes que expire.`);
+        enviarCorreo(correo, contentVerificacion.subject.format(codigo), contentVerificacion.body.format(nombres, apellidoPaterno, codigo));
         
         //TODO: Si el tipo de usuario creado es Distribuidor, comunicar a los administradores para su activacion
 
@@ -131,7 +120,6 @@ const confirmarCorreo = async (req, res) => {
         codigo: 'required|integer'
     });
     if(validator.fails()){
-        logger.info(validator.errors.all());
         response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
         return;
     }
@@ -162,16 +150,7 @@ const confirmarCorreo = async (req, res) => {
 
         //Se genera nuevo token para sesion
         usuarioConfirmar.clave = null;
-        let exp = Math.floor(Date.now() / 1000) + (60 * 60);
-        let expDate = (new Date(exp*1000)).toISOString();
-        let token = jwt.sign({
-            exp: exp,
-            data: usuarioConfirmar
-        }, process.env.TOKEN_SECRET,{
-            algorithm: 'HS256',
-            issuer: process.env.JWT_ISSUER,
-            audience: process.env.JWT_AUDIENCE
-        });
+        let {expDate, token} = generarToken(usuarioConfirmar);
         response(res,HttpStatus.OK,`Correo confirmado. Sesión iniciada.`, {
             exp: expDate,
             usuario: usuarioConfirmar,
@@ -184,8 +163,35 @@ const confirmarCorreo = async (req, res) => {
     }
 };
 
-const solicitarCodigoConfirmacion = (req, res) => {
+const solicitarCodigoConfirmacion = async (req, res) => {
+    let validator = new Validator(req.body,{
+        correo: 'required|email'
+    });
+    if(validator.fails){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
+        return;
+    }
 
+    let correo = req.body.correo;
+
+    //Consultamos a BD
+    const Usuario = require('../models/usuario.model');
+    const usuario = await Usuario.findOne({ where: {correo: correo}});
+    if(!usuario){
+        //No hay correo registrado
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo no registrado.');
+        return;
+    }else{
+        let {id, nombres, apellidoPaterno} = usuario;
+        //Se genera un codigo de 6 digitos para validar correo
+        const CodigoVerificacion = require('../models/codigo.verificacion.model');
+        let codigo = generarCodigo();
+        let exp = Date.now() + 300000; //expira en 5 min
+        await CodigoVerificacion.create({codigo: codigo, exp: exp, idUsuario: id});
+        enviarCorreo(correo, contentVerificacion.subject.format(codigo), contentVerificacion.body.format(nombres, apellidoPaterno, codigo));
+        
+        response(res,HttpStatus.OK,'Se envió código de verificación a su correo.');
+    }
 };
 
 const solicitarCodigoNuevaClave = (req, res) => {
@@ -202,6 +208,21 @@ const sha256 = (secret) => {
 
 const generarCodigo = () => {
     return Math.floor(100000 + Math.random() * 900000);
+}
+
+const generarToken = (usuario) => {
+    let exp = Math.floor(Date.now() / 1000) + (60 * 60);
+    let expDate = (new Date(exp*1000)).toISOString();
+    let token = jwt.sign({
+        exp: exp,
+        data: usuario
+    }, process.env.TOKEN_SECRET,{
+        algorithm: 'HS256',
+        issuer: process.env.JWT_ISSUER,
+        audience: process.env.JWT_AUDIENCE
+    });
+
+    return {expDate, token};
 }
 
 module.exports = {login, signUp, confirmarCorreo, solicitarCodigoConfirmacion, solicitarCodigoNuevaClave, cambiarClave};

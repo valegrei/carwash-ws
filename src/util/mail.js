@@ -27,4 +27,14 @@ const enviarCorreo = (correo, asunto , mensaje)=>{
     });
 };
 
-module.exports = {enviarCorreo};
+const contentVerificacion = {
+    subject: 'Código de verificación: {0}',
+    body: 'Estimado/a {0} {1}:\nSe generó el siguiente código para verificar su correo\n\n${2}\n\nPor favor introducirlo en la aplicación antes que expire.'
+};
+
+const contentNuevaClave = {
+    subject: 'Código para renovar clave: {0}',
+    body: 'Estimado/a {0} {1}:\nSe generó el siguiente código para renovar su clave secreta.\n\n${2}\n\nPor favor introducirlo en la aplicación antes que expire. Si no solicitó renovar su contraseña, ignore este correo.'
+};
+
+module.exports = {enviarCorreo,contentVerificacion,contentNuevaClave};
