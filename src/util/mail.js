@@ -27,14 +27,20 @@ const enviarCorreo = (correo, asunto , mensaje)=>{
     });
 };
 
-const contentVerificacion = {
-    subject: 'Código de verificación: {0}',
-    body: 'Estimado/a {0} {1}:\nSe generó el siguiente código para verificar su correo\n\n${2}\n\nPor favor introducirlo en la aplicación antes que expire.'
-};
+const contentVerificacion = (nombres, apellidoPaterno, codigo) => {
+    const content = {
+        subject: `Código de verificación: ${codigo}`,
+        body: `Estimado/a ${nombres} ${apellidoPaterno}:\nSe generó el siguiente código para verificar su correo\n\n${codigo}\n\nPor favor introducirlo en la aplicación antes que expire.`   
+    }
+    return content;
+}
 
-const contentNuevaClave = {
-    subject: 'Código para renovar clave: {0}',
-    body: 'Estimado/a {0} {1}:\nSe generó el siguiente código para renovar su clave secreta.\n\n${2}\n\nPor favor introducirlo en la aplicación antes que expire. Si no solicitó renovar su contraseña, ignore este correo.'
+const contentNuevaClave = (nombres, apellidoPaterno, codigo) => {
+    const content = {
+        subject: `Código para renovar clave: ${codigo}`,
+        body: `Estimado/a ${nombres} ${apellidoPaterno}:\nSe generó el siguiente código para renovar su clave secreta.\n\n${codigo}\n\nPor favor introducirlo en la aplicación antes que expire. Si no solicitó renovar su contraseña, ignore este correo.`
+    }
+    return content;
 };
 
 module.exports = {enviarCorreo,contentVerificacion,contentNuevaClave};

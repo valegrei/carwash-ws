@@ -107,7 +107,8 @@ const signUp = async (req, res) => {
         let codigo = generarCodigo();
         let exp = Date.now() + 300000; //expira en 5 min
         await CodigoVerificacion.create({codigo: codigo, exp: exp, idUsuario: id});
-        enviarCorreo(correo, contentVerificacion.subject.format(codigo), contentVerificacion.body.format(nombres, apellidoPaterno, codigo));
+        const content = contentVerificacion(nombres, apellidoPaterno, codigo);
+        enviarCorreo(correo, content.subject, content.body);
         
         //TODO: Si el tipo de usuario creado es Distribuidor, comunicar a los administradores para su activacion
 
@@ -173,7 +174,7 @@ const solicitarCodigoVerificacion = async (req, res) => {
     let validator = new Validator(req.body,{
         id: 'required|integer'
     });
-    if(validator.fails){
+    if(validator.fails()){
         response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
         return;
     }
@@ -188,13 +189,19 @@ const solicitarCodigoVerificacion = async (req, res) => {
         response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo no registrado.');
         return;
     }else{
-        let {correo, nombres, apellidoPaterno} = usuario;
+        let {correo, nombres, apellidoPaterno, verificado} = usuario;
+        if(verificado){
+            //El correo ya fue verificado antes
+            response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo ya verificado.');
+            return;
+        }
         //Se genera un codigo de 6 digitos para validar correo
         const CodigoVerificacion = require('../models/codigo.verificacion.model');
         let codigo = generarCodigo();
         let exp = Date.now() + 300000; //expira en 5 min
         await CodigoVerificacion.create({codigo: codigo, exp: exp, idUsuario: id});
-        enviarCorreo(correo, contentVerificacion.subject.format(codigo), contentVerificacion.body.format(nombres, apellidoPaterno, codigo));
+        const content = contentVerificacion(nombres, apellidoPaterno, codigo);
+        enviarCorreo(correo, content.subject, content.body);
         
         response(res,HttpStatus.OK,'Se envió código de verificación a su correo.');
     }
@@ -204,7 +211,7 @@ const solicitarCodigoNuevaClave = async (req, res) => {
     let validator = new Validator(req.body,{
         correo: 'required|email'
     });
-    if(validator.fails){
+    if(validator.fails()){
         response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
         return;
     }
@@ -225,7 +232,8 @@ const solicitarCodigoNuevaClave = async (req, res) => {
         let codigo = generarCodigo();
         let exp = Date.now() + 300000; //expira en 5 min
         await CodigoRenuevaClave.create({codigo: codigo, exp: exp, idUsuario: id});
-        enviarCorreo(correo, contentNuevaClave.subject.format(codigo), contentNuevaClave.body.format(nombres, apellidoPaterno, codigo));
+        const content = contentNuevaClave(nombres, apellidoPaterno, codigo);
+        enviarCorreo(correo, content.subject, content.body);
         
         response(res,HttpStatus.OK,'Se envió código para renovar clave.');
     }
@@ -247,23 +255,23 @@ const cambiarClave = async (req, res) => {
     const Usuario = require('../models/usuario.model');
     const CodigoRenuevaClave = require('../models/codigo.renovar.clave.model');
 
-    let usuario = await Usuario.findOne({where: {correo: correo}});
+    const usuario = await Usuario.findOne({where: {correo: correo}});
 
     if(!usuario){
         response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo no registrado.');
         return;
     }else{
-        let id = usuario.id;
-        let codigoRenueva = CodigoRenuevaClave.findOne({
+        let idUsuario = usuario.id;
+        const codigoRenueva = await CodigoRenuevaClave.findOne({
             where: {
-                idUsuario: id, 
+                idUsuario: idUsuario, 
                 codigo: codigo,
                 exp: {
                     [Op.gt]: Date.now()
                 },
                 estado: 1
             }
-        })
+        });
         if(!codigoRenueva){
             response(res,HttpStatus.UNPROCESABLE_ENTITY,'Código inválido.');
             return;
