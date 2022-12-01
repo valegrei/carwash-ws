@@ -27,18 +27,18 @@ const enviarCorreo = (correo, asunto , mensaje)=>{
     });
 };
 
-const contentVerificacion = (nombres, apellidoPaterno, codigo) => {
+const contentVerificacion = (codigo) => {
     const content = {
-        subject: `Código de verificación: ${codigo}`,
-        body: `Estimado/a ${nombres} ${apellidoPaterno}:\nSe generó el siguiente código para verificar su correo\n\n${codigo}\n\nPor favor introducirlo en la aplicación antes que expire.`   
+        subject: `Código de verificación de correo: ${codigo}`,
+        body: `Estimado/a usuario/a:\nSe generó el siguiente código para verificar su correo\n\n${codigo}\n\nPor favor introducirlo en la aplicación antes que expire.`   
     }
     return content;
 }
 
-const contentNuevaClave = (nombres, apellidoPaterno, codigo) => {
+const contentNuevaClave = (codigo) => {
     const content = {
         subject: `Código para renovar clave: ${codigo}`,
-        body: `Estimado/a ${nombres} ${apellidoPaterno}:\nSe generó el siguiente código para renovar su clave secreta.\n\n${codigo}\n\nPor favor introducirlo en la aplicación antes que expire. Si no solicitó renovar su contraseña, ignore este correo.`
+        body: `Estimado/a usuario/a:\nSe generó el siguiente código para renovar su clave secreta.\n\n${codigo}\n\nPor favor introducirlo en la aplicación antes que expire. Si no solicitó renovar su contraseña, ignore este correo.`
     }
     return content;
 };

@@ -61,11 +61,8 @@ const signUp = async (req, res) => {
     let validator = new Validator(req.body, {
         correo: 'required|email',
         clave: 'required|string',
-        nombres: 'required|string',
-        apellidoPaterno: 'required|string',
-        apellidoMaterno: 'required|string',
         razonSocial: 'string',
-        nroDocumento: 'required|numeric',
+        nroDocumento: 'numeric',
         nroCel1: 'string',
         nroCel2: 'string',
         idTipoUsuario: 'required|integer',
@@ -79,9 +76,6 @@ const signUp = async (req, res) => {
     let data = {
         correo: req.body.correo,
         clave: sha256(req.body.clave),
-        nombres: req.body.nombres,
-        apellidoPaterno: req.body.apellidoPaterno,
-        apellidoMaterno: req.body.apellidoMaterno,
         razonSocial: req.body.razonSocial,
         nroDocumento: req.body.nroDocumento,
         nroCel1: req.body.nroCel1,
@@ -101,13 +95,13 @@ const signUp = async (req, res) => {
     //Procede a insertar usuario
     Usuario.create(data)
     .then(async nuevoUsuario => {
-        let {id, correo, nombres, apellidoPaterno, idTipoUsuario} = nuevoUsuario;
+        let {id, correo} = nuevoUsuario;
         //Se genera un codigo de 6 digitos para validar correo
         const CodigoVerificacion = require('../models/codigo.verificacion.model');
         let codigo = generarCodigo();
         let exp = Date.now() + 300000; //expira en 5 min
         await CodigoVerificacion.create({codigo: codigo, exp: exp, idUsuario: id});
-        const content = contentVerificacion(nombres, apellidoPaterno, codigo);
+        const content = contentVerificacion(codigo);
         enviarCorreo(correo, content.subject, content.body);
         
         //TODO: Si el tipo de usuario creado es Distribuidor, comunicar a los administradores para su activacion
@@ -189,7 +183,7 @@ const solicitarCodigoVerificacion = async (req, res) => {
         response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo no registrado.');
         return;
     }else{
-        let {correo, nombres, apellidoPaterno, verificado} = usuario;
+        let {correo, verificado} = usuario;
         if(verificado){
             //El correo ya fue verificado antes
             response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo ya verificado.');
@@ -200,7 +194,7 @@ const solicitarCodigoVerificacion = async (req, res) => {
         let codigo = generarCodigo();
         let exp = Date.now() + 300000; //expira en 5 min
         await CodigoVerificacion.create({codigo: codigo, exp: exp, idUsuario: id});
-        const content = contentVerificacion(nombres, apellidoPaterno, codigo);
+        const content = contentVerificacion(codigo);
         enviarCorreo(correo, content.subject, content.body);
         
         response(res,HttpStatus.OK,'Se envió código de verificación a su correo.');
@@ -226,13 +220,13 @@ const solicitarCodigoNuevaClave = async (req, res) => {
         response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo no registrado.');
         return;
     }else{
-        let {id, nombres, apellidoPaterno} = usuario;
+        let {id} = usuario;
         //Se genera un codigo de 6 digitos para validar correo
         const CodigoRenuevaClave = require('../models/codigo.renovar.clave.model');
         let codigo = generarCodigo();
         let exp = Date.now() + 300000; //expira en 5 min
         await CodigoRenuevaClave.create({codigo: codigo, exp: exp, idUsuario: id});
-        const content = contentNuevaClave(nombres, apellidoPaterno, codigo);
+        const content = contentNuevaClave(codigo);
         enviarCorreo(correo, content.subject, content.body);
         
         response(res,HttpStatus.OK,'Se envió código para renovar clave.');
@@ -283,14 +277,22 @@ const cambiarClave = async (req, res) => {
             codigoRenueva.estado = 0;
             await codigoRenueva.save();
 
-            //se genera nuevo token para iniciar sesion
-            usuario.clave = null;
-            let {expDate, token} = generarToken(usuario);
-            response(res,HttpStatus.OK,`Clave renovada. Sesión iniciada.`, {
-                exp: expDate,
-                usuario: usuario,
-                jwt: token
-            });
+            let {verificado} = usuario;
+            
+            if(verificado){
+                //se genera nuevo token para iniciar sesion
+                usuario.clave = null;
+                let {expDate, token} = generarToken(usuario);
+                response(res,HttpStatus.OK,`Clave renovada. Sesión iniciada.`, {
+                    exp: expDate,
+                    usuario: usuario,
+                    jwt: token
+                });
+            }else{
+                response(res,HttpStatus.OK,`Verificación pendiente.`, {
+                    usuario: usuario
+                });
+            }
         }
     }
 
