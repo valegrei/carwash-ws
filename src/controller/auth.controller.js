@@ -311,7 +311,7 @@ const generarToken = (usuario) => {
     let expDate = (new Date(exp*1000)).toISOString();
     let token = jwt.sign({
         exp: exp,
-        data: usuario
+        data: {idUsuario: usuario.id}
     }, process.env.TOKEN_SECRET,{
         algorithm: 'HS256',
         issuer: process.env.JWT_ISSUER,

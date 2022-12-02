@@ -18,7 +18,7 @@ app.use(cors({origin: '*'}));
 app.use(express.json());
 
 //Inicializa Sequelize
-db.sequelize.sync({ force: true }).then(()=>{ //sync({ force: true }) "Drop and re-sync db."
+db.sequelize.sync().then(()=>{ //sync({ force: true }) "Drop and re-sync db."
     logger.info('Todos los modelos fueron sincronizados con exito!');
     initData();
 });
@@ -31,7 +31,7 @@ app.get('/', (req, res) => response(res, HttpStatus.OK, 'Carwash API, v1.0.0 - A
 app.use('*', (req, res) => response(res, HttpStatus.NOT_FOUND, 'La ruta no existe'));
 app.use(function (err, req, res, next) {    //Manejar error de token invalido
     if (err.name === "UnauthorizedError") {
-        response(res, HttpStatus.UNAUTHORIZED.status, 'Token invalido');
+        response(res, HttpStatus.UNAUTHORIZED, 'Token invalido');
     } else {
         next(err);
     }
