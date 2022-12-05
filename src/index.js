@@ -6,6 +6,7 @@ const {response} = require('./domain/response');
 const HttpStatus = require('./util/http.status');
 const authRoutes = require('./route/auth.routes');
 const usuarioRoutes = require('./route/usuario.route');
+const adminRoutes = require('./route/admin.route');
 const logger = require('./util/logger');
 const db = require('./models');
 const initData = require('./models/init.data');
@@ -27,6 +28,7 @@ app.use('/api',jwtMiddleware);
 //demas reglas
 app.use('/auth', authRoutes);
 app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/admin', adminRoutes);
 app.get('/', (req, res) => response(res, HttpStatus.OK, 'Carwash API, v1.0.0 - All Systems Go'));
 app.use('*', (req, res) => response(res, HttpStatus.NOT_FOUND, 'La ruta no existe'));
 app.use(function (err, req, res, next) {    //Manejar error de token invalido
