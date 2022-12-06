@@ -41,7 +41,7 @@ const getUsuarios = async (req, res) => {
     let usuarios = await Usuario.findAll({
         attributes: [
             'id', 'correo', 'nombres', 'apellidoPaterno', 'apellidoMaterno', 
-            'razonSocial', 'nroDocumento', 'distAct', 'estado', "verificado", 'idTipoUsuario', 
+            'razonSocial', 'nroDocumento', 'nroCel1','nroCel2', 'distAct', 'estado', "verificado", 'idTipoUsuario', 
             'idTipoDocumento', 'createdAt', 'updatedAt'
         ],
         where:{
