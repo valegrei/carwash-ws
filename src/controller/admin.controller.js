@@ -22,7 +22,7 @@ const verificarAdmin = async (req,res) => {
  */
 const getUsuarios = async (req, res) => {
 
-    logger.info(`${req.method} ${req.originalUr}, obteniendo usuarios`);
+    logger.info(`${req.method} ${req.originalUrl}, obteniendo usuarios`);
 
     await verificarAdmin(req,res);
 
@@ -67,7 +67,7 @@ const getUsuarios = async (req, res) => {
  * Solo el usuario de Rol Administrador esta autorizado para hacerlo 
  */
 const modificarUsuario = async (req, res) => {
-    logger.info(`${req.method} ${req.originalurl}, actualizando usuario`);
+    logger.info(`${req.method} ${req.originalUrl}, actualizando usuario`);
     
     await verificarAdmin(req,res);
 
@@ -83,6 +83,8 @@ const modificarUsuario = async (req, res) => {
     //validamos contenido
     validator = new Validator(req.body,{
         idTipoUsuario: 'integer',
+        idTipoDocumento: 'integer',
+        nroDocumento: 'integer',
         distAct: 'boolean',
         estado: 'boolean',
     });
@@ -95,6 +97,12 @@ const modificarUsuario = async (req, res) => {
     let data = {}
     if(req.body.idTipoUsuario != null){
         data.idTipoUsuario = req.body.idTipoUsuario;
+    }
+    if(req.body.idTipoDocumento != null){
+        data.idTipoDocumento = req.body.idTipoDocumento;
+    }
+    if(req.body.nroDocumento != null){
+        data.nroDocumento = req.body.nroDocumento;
     }
     if(req.body.distAct != null){
         data.distAct = req.body.distAct;

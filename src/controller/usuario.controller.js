@@ -27,11 +27,6 @@ const getUsuario = async (req, res) => {
 
     const Usuario = require('../models/usuario.model');
     let usuario = await Usuario.findOne({
-        attributes: [
-            'id', 'correo', 'nombres', 'apellidoPaterno', 'apellidoMaterno', 
-            'razonSocial', 'nroDocumento', 'distAct', 'estado', "verificado", 'idTipoUsuario', 
-            'idTipoDocumento', 'createdAt', 'updatedAt'
-        ],
         where:{ id: idUsuario }
     });
 
@@ -40,6 +35,7 @@ const getUsuario = async (req, res) => {
         response(res,HttpStatus.NOT_FOUND,`Usuario no encontrado.`);
         return;
     }else{
+        usuario.clave = null;
         response(res,HttpStatus.OK,`Usuario encontrado`,{usuario: usuario});
         return;
     }
@@ -102,6 +98,7 @@ const updateUsuario = async (req, res) => {
         response(res,HttpStatus.NOT_FOUND,`Usuario no encontrado.`);
         return;
     }else{
+        usuario.clave = null;
         response(res,HttpStatus.OK,`Usuario actualizado`,{usuario: usuario});
         return;
     }
