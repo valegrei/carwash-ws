@@ -3,6 +3,9 @@ const TipoUsuario = require('./tipo.usuario.model');
 const Usuario = require('./usuario.model');
 const CodigoVerificacion = require('./codigo.verificacion.model');
 const CodigoRenuevaClave = require('./codigo.renovar.clave.model');
+const Archivo = require('./archivo.model');
+const Anuncio = require('./anuncio.model');
+const Vehiculo = require('./vehiculo.model');
 const logger = require('../util/logger');
 
 const initData = async () => {

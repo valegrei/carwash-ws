@@ -2,6 +2,7 @@ const { DataTypes, Model } = require('sequelize');
 const TipoDocumento = require('./tipo.documento.model');
 const TipoUsuario = require('./tipo.usuario.model'); 
 const db = require('.');
+const Archivo = require('./archivo.model');
 
 class Usuario extends Model{}
 
@@ -68,6 +69,13 @@ Usuario.init({
         type: DataTypes.INTEGER,
         references: {
             model: TipoDocumento,
+            key: 'id'
+        }
+    },
+    idArchivoFoto: {
+        type: DataTypes.INTEGER,
+        references: {
+            model: Archivo,
             key: 'id'
         }
     }
