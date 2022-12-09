@@ -1,5 +1,5 @@
 const express = require('express');
-const {getUsuario, updateUsuario, subirFoto} = require('../controller/usuario.controller');
+const {getUsuario, updateUsuario} = require('../controller/usuario.controller');
 const multer  = require('multer')
 const path = require('path');
 const uuid4 = require('uuid4');
@@ -18,9 +18,6 @@ const usuarioRoutes = express.Router();
 
 usuarioRoutes.route('/:id')
     .get(getUsuario)
-    .put(updateUsuario);
-
-usuarioRoutes.route('/:id/foto')
-    .post(upload.single('foto'), subirFoto);
+    .post(upload.single('foto'),updateUsuario);
 
 module.exports = usuarioRoutes;

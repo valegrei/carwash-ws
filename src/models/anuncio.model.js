@@ -1,6 +1,6 @@
 const { DataTypes, Model } = require('sequelize');
 const db = require('.');
-const Archivo = require('./archivo.model')
+const Archivo = require('./archivo.model');
 
 class Anuncio extends Model{}
 
@@ -18,13 +18,13 @@ Anuncio.init({
     descripcion: {
         type: DataTypes.STRING(300)
     },
-    idArchivo: {
+    /*idArchivo: {
         type: DataTypes.INTEGER,
         references: {
             model: Archivo,
             key: 'id'
         }
-    },
+    },*/
     estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: 1,
@@ -33,5 +33,7 @@ Anuncio.init({
 }, {
     sequelize: db.sequelize
 });
+
+Anuncio.belongsTo(Archivo,{foreignKey: 'idArchivo'});
 
 module.exports = Anuncio;

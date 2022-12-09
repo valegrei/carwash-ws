@@ -28,7 +28,14 @@ const login = async (req, res) => {
 
     //Consultamos a BD
     const Usuario = require('../models/usuario.model');
-    const usuario = await Usuario.findOne({ where: {correo: correo}});
+    const Archivo = require('../models/archivo.model');
+    const usuario = await Usuario.findOne({
+        include: {
+            model: Archivo,
+            attributes: ['nombre']
+        },
+        where: {correo: correo}
+    });
     if(!usuario){
         //No hay correo registrado
         response(res,HttpStatus.UNPROCESABLE_ENTITY,`Correo no registrado.`);
@@ -144,8 +151,15 @@ const confirmarCorreo = async (req, res) => {
         //Codigo valido, se procede a confirmar
         codigoActual.estado = 0;
         await codigoActual.save();
+        const Archivo = require('../models/archivo.model');
 
-        let usuarioConfirmar = await Usuario.findOne({where:{id:id}});
+        let usuarioConfirmar = await Usuario.findOne({
+            include: {
+                model: Archivo,
+                attributes: ['nombre']
+            },
+            where:{id:id}
+        });
         usuarioConfirmar.verificado = 1;
         usuarioConfirmar.save();
 
@@ -247,9 +261,16 @@ const cambiarClave = async (req, res) => {
     let {correo, clave, codigo} = req.body;
 
     const Usuario = require('../models/usuario.model');
+    const Archivo = require('../models/archivo.model');
     const CodigoRenuevaClave = require('../models/codigo.renovar.clave.model');
 
-    const usuario = await Usuario.findOne({where: {correo: correo}});
+    const usuario = await Usuario.findOne({
+        include: {
+            model: Archivo,
+            attributes: ['nombre']
+        },
+        where: {correo: correo}
+    });
 
     if(!usuario){
         response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo no registrado.');

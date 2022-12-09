@@ -3,8 +3,9 @@ const logger = require('../util/logger');
 const HttpStatus = require('../util/http.status');
 const Validator = require('validatorjs');
 const fs = require('fs-extra');
-const db = require('../models');
+const {QueryTypes } = require('sequelize'); 
 const uploadFolder = 'uploads/images/';
+const {queryDesactivarFotos} = require('../models/queries');
 
 /**
  * Obtiene datos del mismo usuario que lo solicita
@@ -28,8 +29,14 @@ const getUsuario = async (req, res) => {
     }
 
     const Usuario = require('../models/usuario.model');
+    const Archivo = require('../models/archivo.model');
+
     let usuario = await Usuario.findOne({
-        where:{ id: idUsuario }
+        include:{
+            model: Archivo,
+            attributes: ['nombre']
+        },
+        where:{id: idUsuario, estado: true}
     });
 
     if(!usuario){
@@ -38,6 +45,7 @@ const getUsuario = async (req, res) => {
         return;
     }else{
         usuario.clave = null;
+
         response(res,HttpStatus.OK,`Usuario encontrado`,{usuario: usuario});
         return;
     }
@@ -60,6 +68,7 @@ const updateUsuario = async (req, res) => {
     let idAuthUsu = req.auth.data.idUsuario;
     let idUsuario = req.params.id;
     if(idAuthUsu!= idUsuario){
+        eliminarFotoTmp(req.file);
         response(res,HttpStatus.UNAUTHORIZED,`Solo puede modificar por el mismo id`);
         return;
     }
@@ -76,6 +85,7 @@ const updateUsuario = async (req, res) => {
         idTipoDocumento: 'required|integer',
     });
     if(validator.fails()){
+        eliminarFotoTmp(req.file);
         response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
         return;
     }
@@ -93,8 +103,20 @@ const updateUsuario = async (req, res) => {
     };
 
     const Usuario = require('../models/usuario.model');
+    const Archivo = require('../models/archivo.model');
     await Usuario.update(data,{where:{id: idUsuario, estado: true}});
-    let usuario = await Usuario.findOne({where:{id: idUsuario, estado: true}});
+    //guarda foto
+    await guardarFoto(idUsuario, req.file);
+    //obtiene usuario actualizado
+
+    const usuario = await Usuario.findOne({
+        include:{
+            model: Archivo,
+            attributes: ['nombre']
+        },
+        where:{id: idUsuario, estado: true}
+    });
+
     if(!usuario){
         //vacio
         response(res,HttpStatus.NOT_FOUND,`Usuario no encontrado.`);
@@ -106,42 +128,30 @@ const updateUsuario = async (req, res) => {
     }
 };
 
-const subirFoto = async (req, res)=> {
-    logger.info(`${req.method} ${req.originalUrl}, subiendo foto de usuario`);
-    
-    //Validamos Id
-    let validator = new Validator(req.params,{
-        id: 'required|integer',
-    });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`id faltante`);
-        return;
+const eliminarFotoTmp = async (file) => {
+    if(!file) return;
+    try{
+        await fs.remove(destination + filename);
+    }catch(error){
+        logger.error(error);
     }
+}
 
-    if(!req.file){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`No se subió archivo`);
-        return;
-    }
+const guardarFoto = async (idUsuario, file) => {
+    if(!file) return;
 
-    let {filename, destination} = req.file;
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
+    let {filename, destination} = file;
     
     try{
-        if(idAuthUsu!= idUsuario){
-            //Elimina temporal
-            await fs.remove(destination + filename);
-            response(res,HttpStatus.UNAUTHORIZED,`Solo puede modificar por el mismo id`);
-            return;
-        }
-
         //desactiva archivos de perfil anteriores
-        await db.sequelize.query(`
-            UPDATE archivos
-            INNER JOIN usuarios ON archivos.id = usuarios.idArchivoFoto
-            SET archivos.estado = 0
-            WHERE usuarios.id = ${idUsuario} ANd archivos.estado = 1
-        `);
+        const db = require('../models');
+        await db.sequelize.query(
+            queryDesactivarFotos,
+            {
+                replacements: { idUsuario: idUsuario},
+                type: QueryTypes.UPDATE
+            }
+        );
     
         //inserta archivo
         const Archivo = require('../models/archivo.model');
@@ -155,14 +165,9 @@ const subirFoto = async (req, res)=> {
 
         //mueve el archivo
         await fs.move(destination + filename, uploadFolder + filename);
-        response(res,HttpStatus.OK,`Foto de usuario actualizado`);
-        return;
-    }
-    catch(error){
+    }catch(error){
         logger.error(error);
-        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error interno al guardar archivo.`);
-        return;
     }
 };
 
-module.exports = {getUsuario, updateUsuario, subirFoto};
+module.exports = {getUsuario, updateUsuario};

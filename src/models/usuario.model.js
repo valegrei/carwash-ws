@@ -72,15 +72,10 @@ Usuario.init({
             key: 'id'
         }
     },
-    idArchivoFoto: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: Archivo,
-            key: 'id'
-        }
-    }
 },{
     sequelize: db.sequelize
 });
+
+Usuario.belongsTo(Archivo,{foreignKey:'idArchivoFoto'});
 
 module.exports = Usuario;
