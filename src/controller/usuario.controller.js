@@ -83,6 +83,7 @@ const updateUsuario = async (req, res) => {
         nroCel1: 'string',
         nroCel2: 'string',
         idTipoDocumento: 'required|integer',
+        eliminarFoto: 'boolean',
     });
     if(validator.fails()){
         eliminarFotoTmp(req.file);
@@ -102,13 +103,20 @@ const updateUsuario = async (req, res) => {
         idTipoDocumento: req.body.idTipoDocumento
     };
 
+    if(req.body.eliminarFoto!= null && req.body.eliminarFoto){
+        //desactiva archivos de perfil anteriores
+        await eliminarFotoUsu(idUsuario);
+        data.idArchivoFoto = null;
+    }else{
+        //guarda foto
+        await guardarFoto(idUsuario, req.file);
+    }
+
     const Usuario = require('../models/usuario.model');
     const Archivo = require('../models/archivo.model');
     await Usuario.update(data,{where:{id: idUsuario, estado: true}});
-    //guarda foto
-    await guardarFoto(idUsuario, req.file);
-    //obtiene usuario actualizado
 
+    //obtiene usuario actualizado
     const usuario = await Usuario.findOne({
         include:{
             model: Archivo,
@@ -144,14 +152,7 @@ const guardarFoto = async (idUsuario, file) => {
     
     try{
         //desactiva archivos de perfil anteriores
-        const db = require('../models');
-        await db.sequelize.query(
-            queryDesactivarFotos,
-            {
-                replacements: { idUsuario: idUsuario},
-                type: QueryTypes.UPDATE
-            }
-        );
+        eliminarFotoUsu(idUsuario);
     
         //inserta archivo
         const Archivo = require('../models/archivo.model');
@@ -168,6 +169,19 @@ const guardarFoto = async (idUsuario, file) => {
     }catch(error){
         logger.error(error);
     }
+};
+
+
+const eliminarFotoUsu = async (idUsuario) => {
+    //desactiva archivos de perfil anteriores
+    const db = require('../models');
+    await db.sequelize.query(
+        queryDesactivarFotos,
+        {
+            replacements: { idUsuario: idUsuario},
+            type: QueryTypes.UPDATE
+        }
+    );
 };
 
 module.exports = {getUsuario, updateUsuario};

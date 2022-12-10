@@ -18,13 +18,9 @@ Anuncio.init({
     descripcion: {
         type: DataTypes.STRING(300)
     },
-    /*idArchivo: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: Archivo,
-            key: 'id'
-        }
-    },*/
+    url: {
+        type: DataTypes.STRING(250)
+    },
     estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: 1,
