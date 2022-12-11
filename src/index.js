@@ -17,7 +17,10 @@ const fs = require('fs-extra');
 fs.ensureDir('temp_uploads/',(err) =>{
     if(err) logger.error(err);
 });
-fs.ensureDir('uploads/images/',(err) =>{
+fs.ensureDir('uploads/images/profile/',(err) =>{
+    if(err) logger.error(err);
+});
+fs.ensureDir('uploads/images/anuncios/',(err) =>{
     if(err) logger.error(err);
 });
 

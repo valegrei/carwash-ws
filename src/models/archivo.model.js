@@ -10,15 +10,10 @@ Archivo.init({
         primaryKey: true,
         autoIncrement: true
     },
-    nombre: {
-        type: DataTypes.STRING(45),
+    path: {
+        type: DataTypes.STRING(100),
         allowNull: false
     },
-    estado: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: 1,
-        allowNulls: false
-    }
 }, {
     sequelize: db.sequelize
 });

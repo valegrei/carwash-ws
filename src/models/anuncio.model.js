@@ -11,12 +11,8 @@ Anuncio.init({
         primaryKey: true,
         autoIncrement: true
     },
-    titulo: {
-        type: DataTypes.STRING(100),
-        allowNull: false
-    },
     descripcion: {
-        type: DataTypes.STRING(300)
+        type: DataTypes.STRING(100)
     },
     url: {
         type: DataTypes.STRING(250)

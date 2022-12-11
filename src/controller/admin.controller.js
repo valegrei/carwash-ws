@@ -3,6 +3,9 @@ const logger = require('../util/logger');
 const HttpStatus = require('../util/http.status');
 const Validator = require('validatorjs');
 const {Op, where} = require('sequelize');
+const fs = require('fs-extra');
+const uploadFolder = 'uploads/images/anuncios/';
+const pathStr = '/files/images/anuncios/';
 
 const verificarAdmin = async (req,res) => {
     let idAuthUsu = req.auth.data.idUsuario;
@@ -111,8 +114,6 @@ const modificarUsuario = async (req, res) => {
         data.estado = req.body.estado;
     }
 
-    logger.info(data);
-
     const Usuario = require('../models/usuario.model');
 
     //procedemos a deshabilitar usuario
@@ -121,7 +122,7 @@ const modificarUsuario = async (req, res) => {
     response(res, HttpStatus.OK, `Usuario deshabilitado`);
 };
 
-const obtenerAnuncions = async (req, res) => {
+const obtenerAnuncios = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, obteniendo anuncios`);
 
@@ -140,10 +141,10 @@ const obtenerAnuncions = async (req, res) => {
 
     const Anuncio = require('../models/anuncio.model');
     const Archivo = require('../models/archivo.model');
-    const anuncios = Anuncio.findAll({
+    const anuncios = await Anuncio.findAll({
         include: {
             model: Archivo,
-            attributes: ['nombre']
+            attributes: ['path']
         },
         where: {
             [Op.or]:[
@@ -165,13 +166,57 @@ const obtenerAnuncions = async (req, res) => {
 
 const crearAnuncio = async (req, res) => {
 
-    logger.info(`${req.method} ${req.originalUrl}, obteniendo anuncios`);
+    logger.info(`${req.method} ${req.originalUrl}, Creando anuncio`);
 
     await verificarAdmin(req,res);
 
+    if(!req.file){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Falta imagen`);
+        return;
+    }
+
     //Validamos
     let validator = new Validator(req.body,{
-        titulo: 'required|string',
+        descripcion: 'string',
+        url: 'url',
+    });
+    if(validator.fails()){
+        eliminarFotoTmp(req.file);
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Faltan datos`);
+        return;
+    }
+
+    const data = {
+        descripcion: req.body.descripcion,
+        url: req.body.url
+    };
+    try{
+        data.idArchivo = await guardarImagen(req.file);
+        const Anuncio = require('../models/anuncio.model');
+    
+        let anuncio = await Anuncio.create(data);
+        response(res,HttpStatus.OK,`Anuncio guardado: ${anuncio.id}`);
+    }catch(error){
+        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al guardar anuncio`);
+    }
+};
+
+const actualizarAnuncio = async (req, res) => {
+    logger.info(`${req.method} ${req.originalUrl}, Actualizando anuncio`);
+
+    await verificarAdmin(req,res);
+
+    //Validamos idAnuncio
+    let validator = new Validator(req.params,{
+        id: 'required|integer',
+    });
+    if(validator.fails()){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Falta id de anuncio`);
+        return;
+    }
+
+    //Validamos datos
+    validator = new Validator(req.body,{
         descripcion: 'string',
         url: 'url',
     });
@@ -180,21 +225,49 @@ const crearAnuncio = async (req, res) => {
         return;
     }
 
+    const idAnuncio = req.params.id;
     const data = {
-        titulo: req.body.titulo,
         descripcion: req.body.descripcion,
         url: req.body.url
     };
+    try{
+        const Anuncio = require('../models/anuncio.model');
     
-    const Anuncio = require('../models/anuncio.model');
-    
-    let anuncio = await Anuncio.create(data);
-    guardarFoto(anuncio, req.file);
+        await Anuncio.update(data, {where:{id: idAnuncio}});
+        response(res,HttpStatus.OK,`Anuncio actualizado`);
+    }catch(error){
+        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al actualizar anuncio`);
+    }
 };
 
-const actualizarAnuncio = async (req, res) => {
+const eliminarAnuncio = async (req, res) => {
+    logger.info(`${req.method} ${req.originalUrl}, Eliminando anuncios`);
 
-};
+    await verificarAdmin(req,res);
+    
+    //Validamos datos
+    validator = new Validator(req.body,{
+        ids: 'array',
+    });
+    if(validator.fails()){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Faltan ids de anuncios`);
+        return;
+    }
+
+    const ids = req.body.ids;
+    try{
+        const Anuncio = require('../models/anuncio.model');
+        await Anuncio.update({estado: false}, {
+            where:{
+                id: {[Op.in]: ids}
+            }
+        });
+        response(res,HttpStatus.OK,`Anuncios eliminados`);
+    }catch(error){
+        logger.error(error);
+        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al eliminar anuncios`);
+    }
+}
 
 
 const eliminarFotoTmp = async (file) => {
@@ -206,26 +279,23 @@ const eliminarFotoTmp = async (file) => {
     }
 }
 
-const guardarFoto = async (anuncio, file) => {
+const guardarImagen = async (file) => {
     if(!file) return;
 
     let {filename, destination} = file;
     
     try{
-        //desactiva archivos de perfil anteriores
-        eliminarFotoUsu(idUsuario);
-    
         //inserta archivo
         const Archivo = require('../models/archivo.model');
-        let archivo = await Archivo.create({nombre: filename})
-        
-        await anuncio.setArchivo(archivo);
+        let archivo = await Archivo.create({path: pathStr+filename})
 
         //mueve el archivo
         await fs.move(destination + filename, uploadFolder + filename);
+        return archivo.id;
     }catch(error){
         logger.error(error);
+        return null;
     }
 };
 
-module.exports = {getUsuarios, modificarUsuario, obtenerAnuncions, crearAnuncio, actualizarAnuncio};
+module.exports = {getUsuarios,modificarUsuario,obtenerAnuncios, crearAnuncio, actualizarAnuncio, eliminarAnuncio};

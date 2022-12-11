@@ -32,7 +32,7 @@ const login = async (req, res) => {
     const usuario = await Usuario.findOne({
         include: {
             model: Archivo,
-            attributes: ['nombre']
+            attributes: ['path']
         },
         where: {correo: correo}
     });
@@ -156,7 +156,7 @@ const confirmarCorreo = async (req, res) => {
         let usuarioConfirmar = await Usuario.findOne({
             include: {
                 model: Archivo,
-                attributes: ['nombre']
+                attributes: ['path']
             },
             where:{id:id}
         });
@@ -267,7 +267,7 @@ const cambiarClave = async (req, res) => {
     const usuario = await Usuario.findOne({
         include: {
             model: Archivo,
-            attributes: ['nombre']
+            attributes: ['path']
         },
         where: {correo: correo}
     });

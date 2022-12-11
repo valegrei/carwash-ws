@@ -3,9 +3,8 @@ const logger = require('../util/logger');
 const HttpStatus = require('../util/http.status');
 const Validator = require('validatorjs');
 const fs = require('fs-extra');
-const {QueryTypes } = require('sequelize'); 
-const uploadFolder = 'uploads/images/';
-const {queryDesactivarFotos} = require('../models/queries');
+const uploadFolder = 'uploads/images/profile/';
+const pathStr = '/files/images/profile/';
 
 /**
  * Obtiene datos del mismo usuario que lo solicita
@@ -34,7 +33,7 @@ const getUsuario = async (req, res) => {
     let usuario = await Usuario.findOne({
         include:{
             model: Archivo,
-            attributes: ['nombre']
+            attributes: ['path']
         },
         where:{id: idUsuario, estado: true}
     });
@@ -105,7 +104,6 @@ const updateUsuario = async (req, res) => {
 
     if(req.body.eliminarFoto!= null && req.body.eliminarFoto){
         //desactiva archivos de perfil anteriores
-        await eliminarFotoUsu(idUsuario);
         data.idArchivoFoto = null;
     }else{
         //guarda foto
@@ -120,7 +118,7 @@ const updateUsuario = async (req, res) => {
     const usuario = await Usuario.findOne({
         include:{
             model: Archivo,
-            attributes: ['nombre']
+            attributes: ['path']
         },
         where:{id: idUsuario, estado: true}
     });
@@ -151,12 +149,9 @@ const guardarFoto = async (idUsuario, file) => {
     let {filename, destination} = file;
     
     try{
-        //desactiva archivos de perfil anteriores
-        eliminarFotoUsu(idUsuario);
-    
         //inserta archivo
         const Archivo = require('../models/archivo.model');
-        let archivo = await Archivo.create({nombre: filename})
+        let archivo = await Archivo.create({path: pathStr + filename})
         
         //actualiza usuario
         let {id} = archivo;
@@ -169,19 +164,6 @@ const guardarFoto = async (idUsuario, file) => {
     }catch(error){
         logger.error(error);
     }
-};
-
-
-const eliminarFotoUsu = async (idUsuario) => {
-    //desactiva archivos de perfil anteriores
-    const db = require('../models');
-    await db.sequelize.query(
-        queryDesactivarFotos,
-        {
-            replacements: { idUsuario: idUsuario},
-            type: QueryTypes.UPDATE
-        }
-    );
 };
 
 module.exports = {getUsuario, updateUsuario};

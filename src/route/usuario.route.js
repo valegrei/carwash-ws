@@ -1,6 +1,6 @@
 const express = require('express');
 const {getUsuario, updateUsuario} = require('../controller/usuario.controller');
-const multer  = require('multer')
+const multer  = require('multer');
 const path = require('path');
 const uuid4 = require('uuid4');
 
