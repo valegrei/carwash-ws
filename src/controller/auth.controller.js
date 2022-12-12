@@ -43,6 +43,7 @@ const login = async (req, res) => {
     }
     if(usuario.clave === sha256(clave)){//Se comprueba si la clave es correcta
         if(usuario.verificado){
+
             usuario.clave = null;
             let {expDate, token} = generarToken(usuario);
             response(res,HttpStatus.OK,`Sesión iniciada.`, {
@@ -162,6 +163,7 @@ const confirmarCorreo = async (req, res) => {
         });
         usuarioConfirmar.verificado = 1;
         usuarioConfirmar.save();
+
 
         //Se genera nuevo token para sesion
         usuarioConfirmar.clave = null;
