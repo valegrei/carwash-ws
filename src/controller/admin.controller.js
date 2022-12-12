@@ -6,6 +6,7 @@ const {Op, where} = require('sequelize');
 const fs = require('fs-extra');
 const uploadFolder = 'uploads/images/anuncios/';
 const pathStr = '/files/images/anuncios/';
+const {enviarCorreo, contentNotifDistribActivado} = require('../util/mail');
 
 const verificarAdmin = async (req,res) => {
     let idAuthUsu = req.auth.data.idUsuario;
@@ -97,29 +98,42 @@ const modificarUsuario = async (req, res) => {
     }
 
     let idUsuario = req.params.id;
-    let data = {}
-    if(req.body.idTipoUsuario != null){
-        data.idTipoUsuario = req.body.idTipoUsuario;
-    }
-    if(req.body.idTipoDocumento != null){
-        data.idTipoDocumento = req.body.idTipoDocumento;
-    }
-    if(req.body.nroDocumento != null){
-        data.nroDocumento = req.body.nroDocumento;
-    }
-    if(req.body.distAct != null){
-        data.distAct = req.body.distAct;
-    }
-    if(req.body.estado != null){
-        data.estado = req.body.estado;
-    }
 
-    const Usuario = require('../models/usuario.model');
+    try{
+        const Usuario = require('../models/usuario.model');
 
-    //procedemos a deshabilitar usuario
-    await Usuario.update(data, {where: {id: idUsuario}});
+        const usuario = await Usuario.findByPk(idUsuario);
 
-    response(res, HttpStatus.OK, `Usuario deshabilitado`);
+        const oldDistAct = usuario.distAct
+        
+        if(req.body.idTipoUsuario != null){
+            usuario.idTipoUsuario = req.body.idTipoUsuario;
+        }
+        if(req.body.idTipoDocumento != null){
+            usuario.idTipoDocumento = req.body.idTipoDocumento;
+        }
+        if(req.body.nroDocumento != null){
+            usuario.nroDocumento = req.body.nroDocumento;
+        }
+        if(req.body.distAct != null){
+            usuario.distAct = req.body.distAct;
+        }
+        if(req.body.estado != null){
+            usuario.estado = req.body.estado;
+        }
+
+        await usuario.save();
+
+        if(!oldDistAct && usuario.distAct){
+            //Si se activa distribuidor
+            const content = contentNotifDistribActivado();
+            enviarCorreo(usuario.correo, content.subject, content.body);
+        }
+
+        response(res, HttpStatus.OK, `Usuario modificado`);
+    }catch(error){
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al modificar usuario`);
+    }
 };
 
 const obtenerAnuncios = async (req, res) => {

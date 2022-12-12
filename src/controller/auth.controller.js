@@ -20,7 +20,7 @@ const login = async (req, res) => {
         clave: 'required|string'
     });
     if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos`);
         return;
     }
 
@@ -38,28 +38,32 @@ const login = async (req, res) => {
     });
     if(!usuario){
         //No hay correo registrado
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Correo no registrado.`);
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Correo no registrado`);
         return;
     }
     if(usuario.clave === sha256(clave)){//Se comprueba si la clave es correcta
+        if(usuario.idTipoUsuario == 3 && !usuario.distAct){
+            response(res,HttpStatus.UNPROCESABLE_ENTITY,`Activación de distribuidor pendiente`);
+            return;
+        }
         if(usuario.verificado){
 
             usuario.clave = null;
             let {expDate, token} = generarToken(usuario);
-            response(res,HttpStatus.OK,`Sesión iniciada.`, {
+            response(res,HttpStatus.OK,`Sesión iniciada`, {
                 exp: expDate,
                 usuario: usuario,
                 jwt: token
             });
         }else{
-            response(res,HttpStatus.OK,`Verificación pendiente.`, {
+            response(res,HttpStatus.OK,`Verificación pendiente`, {
                 usuario: usuario
             });
         }
         
     }else{
         //Clave incorrecta
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Clave incorrecta.`);
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Clave incorrecta`);
     }
 };
 
@@ -77,7 +81,7 @@ const signUp = async (req, res) => {
         idTipoDocumento: 'required|integer',
     });
     if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos`);
         return;
     }
 
@@ -97,13 +101,19 @@ const signUp = async (req, res) => {
     const usuExist = await Usuario.findOne({where:{correo: data.correo}});
     if(usuExist){
         //Si existe usuario ya registrado
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Correo ya registrado.`);
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Correo ya registrado`);
         return;
     }
     //Procede a insertar usuario
     Usuario.create(data)
     .then(async nuevoUsuario => {
-        let {id, correo} = nuevoUsuario;
+        let {id, correo, idTipoUsuario, distAct} = nuevoUsuario;
+        
+        //TODO: Si el tipo de usuario creado es Distribuidor, comunicar a los administradores para su activacion
+        if(idTipoUsuario == 3 && !distAct){
+            response(res,HttpStatus.OK,`Activación de distribuidor pendiente`,{ usuario: nuevoUsuario});
+            return;
+        }
         //Se genera un codigo de 6 digitos para validar correo
         const CodigoVerificacion = require('../models/codigo.verificacion.model');
         let codigo = generarCodigo();
@@ -111,14 +121,12 @@ const signUp = async (req, res) => {
         await CodigoVerificacion.create({codigo: codigo, exp: exp, idUsuario: id});
         const content = contentVerificacion(codigo);
         enviarCorreo(correo, content.subject, content.body);
-        
-        //TODO: Si el tipo de usuario creado es Distribuidor, comunicar a los administradores para su activacion
 
-        response(res,HttpStatus.OK,`Usuario registrado, se envió código de verificación a su correo.`, { usuario: nuevoUsuario});
+        response(res,HttpStatus.OK,`Usuario registrado, se envió código de verificación a su correo`, { usuario: nuevoUsuario});
         return;
     }).catch(error => {
         logger.error(error);
-        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error interno al guardar usuario.`);
+        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error interno al guardar usuario`);
         return;
     });
 };
@@ -129,7 +137,7 @@ const confirmarCorreo = async (req, res) => {
         codigo: 'required|integer'
     });
     if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos`);
         return;
     }
 
@@ -168,14 +176,14 @@ const confirmarCorreo = async (req, res) => {
         //Se genera nuevo token para sesion
         usuarioConfirmar.clave = null;
         let {expDate, token} = generarToken(usuarioConfirmar);
-        response(res,HttpStatus.OK,`Correo confirmado. Sesión iniciada.`, {
+        response(res,HttpStatus.OK,`Correo confirmado. Sesión iniciada`, {
             exp: expDate,
             usuario: usuarioConfirmar,
             jwt: token
         });
     }else{
         //No hay codigo
-        response(res,HttpStatus.NOT_FOUND,`Código inválido.`);
+        response(res,HttpStatus.NOT_FOUND,`Código inválido`);
         return;
     }
 };
@@ -185,7 +193,7 @@ const solicitarCodigoVerificacion = async (req, res) => {
         id: 'required|integer'
     });
     if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos`);
         return;
     }
 
@@ -199,7 +207,11 @@ const solicitarCodigoVerificacion = async (req, res) => {
         response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo no registrado.');
         return;
     }else{
-        let {correo, verificado} = usuario;
+        let {correo, verificado, idTipoUsuario, distAct} = usuario;
+        if(idTipoUsuario == 3 && !distAct){
+            response(res,HttpStatus.UNPROCESABLE_ENTITY,`Activación de distribuidor pendiente`);
+            return;
+        }
         if(verificado){
             //El correo ya fue verificado antes
             response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo ya verificado.');
@@ -222,7 +234,7 @@ const solicitarCodigoNuevaClave = async (req, res) => {
         correo: 'required|email'
     });
     if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos`);
         return;
     }
 
@@ -236,7 +248,11 @@ const solicitarCodigoNuevaClave = async (req, res) => {
         response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo no registrado.');
         return;
     }else{
-        let {id} = usuario;
+        let {id,idTipoUsuario,distAct} = usuario;
+        if(idTipoUsuario == 3 && !distAct){
+            response(res,HttpStatus.UNPROCESABLE_ENTITY,`Activación de distribuidor pendiente`);
+            return;
+        }
         //Se genera un codigo de 6 digitos para validar correo
         const CodigoRenuevaClave = require('../models/codigo.renovar.clave.model');
         let codigo = generarCodigo();
@@ -256,7 +272,7 @@ const cambiarClave = async (req, res) => {
         codigo: 'required|integer'
     });
     if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos`);
         return;
     }
 
@@ -306,13 +322,13 @@ const cambiarClave = async (req, res) => {
                 //se genera nuevo token para iniciar sesion
                 usuario.clave = null;
                 let {expDate, token} = generarToken(usuario);
-                response(res,HttpStatus.OK,`Clave renovada. Sesión iniciada.`, {
+                response(res,HttpStatus.OK,`Clave renovada. Sesión iniciada`, {
                     exp: expDate,
                     usuario: usuario,
                     jwt: token
                 });
             }else{
-                response(res,HttpStatus.OK,`Verificación pendiente.`, {
+                response(res,HttpStatus.OK,`Verificación pendiente`, {
                     usuario: usuario
                 });
             }

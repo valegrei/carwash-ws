@@ -27,6 +27,14 @@ const enviarCorreo = (correo, asunto , mensaje)=>{
     });
 };
 
+const contentNotifDistribActivado = () => {
+    const content = {
+        subject: `Registro de distribuidor aprobado`,
+        body: `Estimado/a usuario/a:\nSe aprobó su registro como distribuidor en nuestra aplicación. Ya puede iniciar sesión con su correo y contraseña.`   
+    }
+    return content;
+}
+
 const contentVerificacion = (codigo) => {
     const content = {
         subject: `Código de verificación de correo: ${codigo}`,
@@ -43,4 +51,4 @@ const contentNuevaClave = (codigo) => {
     return content;
 };
 
-module.exports = {enviarCorreo,contentVerificacion,contentNuevaClave};
+module.exports = {enviarCorreo,contentVerificacion,contentNuevaClave, contentNotifDistribActivado};
