@@ -6,10 +6,25 @@ const CodigoRenuevaClave = require('./codigo.renovar.clave.model');
 const Archivo = require('./archivo.model');
 const Anuncio = require('./anuncio.model');
 const Vehiculo = require('./vehiculo.model');
+const {ParametroTipo, Parametro} = require('./parametro.model');
 const logger = require('../util/logger');
 
 const initData = async () => {
     logger.info('Cargando datos iniciales en BD...');
+
+    await ParametroTipo.bulkCreate([
+        {id: 1, nombre: 'PARAM_SERVER'},
+        {id: 2, nombre: 'PARAM_CLIENT'},
+    ],{
+        ignoreDuplicates: true
+    });
+
+    await Parametro.bulkCreate([
+        {clave: 'APP_EMAIL_ADDR', orden: 1, idTipo: 1, valor: 'carwashperuapp@gmail.com'},
+        {clave: 'APP_EMAIL_PASS', orden: 1, idTipo: 1, valor: 'buitsphcuodcycjj'},
+    ],{
+        ignoreDuplicates: true
+    });
 
     await TipoDocumento.bulkCreate([
         {id: 1, nombre: 'DNI', cntDigitos: 8},
