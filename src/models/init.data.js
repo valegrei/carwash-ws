@@ -1,9 +1,6 @@
-const TipoDocumento = require('./tipo.documento.model');
-const TipoUsuario = require('./tipo.usuario.model');
-const Usuario = require('./usuario.model');
+const {Usuario,TipoUsuario,TipoDocumento,EstadoUsuario} = require('./usuario.model');
 const CodigoVerificacion = require('./codigo.verificacion.model');
 const CodigoRenuevaClave = require('./codigo.renovar.clave.model');
-const Archivo = require('./archivo.model');
 const Anuncio = require('./anuncio.model');
 const Vehiculo = require('./vehiculo.model');
 const {ParametroTipo, Parametro} = require('./parametro.model');
@@ -18,6 +15,7 @@ const initData = async () => {
     ],{
         ignoreDuplicates: true
     });
+    logger.info('Datos de ParametroTipo cargados');
 
     await Parametro.bulkCreate([
         {clave: 'APP_EMAIL_ADDR', orden: 1, idTipo: 1, valor: 'carwashperuapp@gmail.com'},
@@ -25,6 +23,16 @@ const initData = async () => {
     ],{
         ignoreDuplicates: true
     });
+    logger.info('Datos de Parametros cargados');
+
+    await EstadoUsuario.bulkCreate([
+        {id: 0, nombre: 'Inactivo'},
+        {id: 1, nombre: 'Activo'},
+        {id: 2, nombre: 'Verificando'},
+    ],{
+        ignoreDuplicates: true
+    });
+    logger.info('Datos de EstadoUsuario cargados');
 
     await TipoDocumento.bulkCreate([
         {id: 1, nombre: 'DNI', cntDigitos: 8},
@@ -55,26 +63,6 @@ const initData = async () => {
             idTipoUsuario: 1,
             idTipoDocumento: 1
         },
-        {
-            id: 2,
-            correo: 'victoralegre2910@gmail.com',
-            clave: '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92',
-            nombres: 'Victor',
-            apellidoPaterno: 'Alegre',
-            apellidoMaterno: 'Ibáñez',
-            idTipoUsuario: 2,
-            idTipoDocumento: 1
-        },
-        /*{
-            id: 3,
-            correo: 'valegrei@outlook.com',
-            clave: '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92',
-            nombres: 'Victor',
-            apellidoPaterno: 'Alegre',
-            apellidoMaterno: 'Ibáñez',
-            idTipoUsuario: 3,
-            idTipoDocumento: 2
-        }*/
     ],{
         ignoreDuplicates: true
     });

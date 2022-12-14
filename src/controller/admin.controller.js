@@ -2,17 +2,18 @@ const {response} = require('../domain/response');
 const logger = require('../util/logger');
 const HttpStatus = require('../util/http.status');
 const Validator = require('validatorjs');
-const {Op, where} = require('sequelize');
+const {Op} = require('sequelize');
 const fs = require('fs-extra');
 const uploadFolder = 'uploads/images/anuncios/';
 const pathStr = '/files/images/anuncios/';
-const {enviarCorreo, contentNotifDistribActivado} = require('../util/mail');
+const {enviarCorreo, contentNotifDistribActivado, contentNotifAdminRegistrado} = require('../util/mail');
+const {generarCodigo, sha256} = require('../util/utils');
 
 const verificarAdmin = async (req,res) => {
     let idAuthUsu = req.auth.data.idUsuario;
-    const Usuario = require('../models/usuario.model');
+    const {Usuario} = require('../models/usuario.model');
     //verificamos si el usuario solicitante tiene el Rol de Administrador
-    let authUsu = await Usuario.findOne({where:{id:idAuthUsu, idTipoUsuario: 1, estado: true}});
+    let authUsu = await Usuario.findOne({where:{id:idAuthUsu, idTipoUsuario: 1, estado: 1}});
     if(!authUsu){
         //No es usuario administrador
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
@@ -40,12 +41,12 @@ const getUsuarios = async (req, res) => {
     }
 
     let lastSincro = req.query.lastSincro;
-    const Usuario = require('../models/usuario.model');
+    const {Usuario} = require('../models/usuario.model');
 
     let usuarios = await Usuario.findAll({
         attributes: [
             'id', 'correo', 'nombres', 'apellidoPaterno', 'apellidoMaterno', 
-            'razonSocial', 'nroDocumento', 'nroCel1','nroCel2', 'distAct', 'estado', "verificado", 'idTipoUsuario', 
+            'razonSocial', 'nroDocumento', 'nroCel1','nroCel2', 'estado', 'idTipoUsuario', 
             'idTipoDocumento', 'createdAt', 'updatedAt'
         ],
         where:{
@@ -67,7 +68,7 @@ const getUsuarios = async (req, res) => {
 };
 
 /**
- * Deshabilita usuario del sistema (estado = false)
+ * Modifica usuario
  * Solo el usuario de Rol Administrador esta autorizado para hacerlo 
  */
 const modificarUsuario = async (req, res) => {
@@ -89,8 +90,7 @@ const modificarUsuario = async (req, res) => {
         idTipoUsuario: 'integer',
         idTipoDocumento: 'integer',
         nroDocumento: 'integer',
-        distAct: 'boolean',
-        estado: 'boolean',
+        estado: 'integer',
     });
     if(validator.fails()){
         response(res,HttpStatus.UNPROCESABLE_ENTITY,`datos erroneos`);
@@ -100,7 +100,7 @@ const modificarUsuario = async (req, res) => {
     let idUsuario = req.params.id;
 
     try{
-        const Usuario = require('../models/usuario.model');
+        const {Usuario} = require('../models/usuario.model');
 
         const usuario = await Usuario.findByPk(idUsuario);
 
@@ -136,6 +136,73 @@ const modificarUsuario = async (req, res) => {
     }
 };
 
+
+/**
+ * Agrega un nuevo usuario Administrador
+ * Solo el usuario de Rol Administrador esta autorizado para hacerlo 
+ */
+ const agregarAdmin = async (req, res) => {
+    logger.info(`${req.method} ${req.originalUrl}, nuevo usuario administrador`);
+    
+    await verificarAdmin(req,res);
+
+    //Validamos contenido
+    let validator = new Validator(req.body,{
+        correo: 'required|email',
+        nombres: 'string',
+        apellidoPaterno: 'string',
+        apellidoMaterno: 'string'
+    });
+    if(validator.fails()){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`datos erroneos`);
+        return;
+    }
+
+    try{
+        const {Usuario} = require('../models/usuario.model');
+        const correo = req.body.correo;
+
+        const usuExist = await Usuario.findOne({where: {correo: correo}});
+        if(usuExist){
+            if(usuExist.estado == 0){   //Inactivo(0)
+                await usuExist.destroy();
+            }else{
+                response(res,HttpStatus.UNPROCESABLE_ENTITY,`Correo existente`);
+                return;
+            }
+        }
+
+        const clave = generarCodigo().toString();
+
+        const data = {
+            correo: correo,
+            clave: sha256(clave),
+            nombres: req.body.nombres,
+            apellidoPaterno: req.body.apellidoPaterno,
+            apellidoMaterno: req.body.apellidoMaterno,
+            idTipoUsuario: 1,   //Admin
+            idTipoDocumento: 1, //DNI
+            estado: 1,  //Activo
+        }
+
+        const usuAdmin = await Usuario.create(data);
+
+        if(usuAdmin){
+            const content = contentNotifAdminRegistrado(usuAdmin.correo, clave);
+            enviarCorreo(usuAdmin.correo, content.subject, content.body);
+    
+            response(res, HttpStatus.OK, `Administrador registrado`);
+        }else{
+            response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al crear administrador`);
+        }
+
+    }catch(error){
+        logger.error(error);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al crear administrador`);
+    }
+};
+
+
 const obtenerAnuncios = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, obteniendo anuncios`);
@@ -154,12 +221,7 @@ const obtenerAnuncios = async (req, res) => {
     let lastSincro = req.query.lastSincro;
 
     const Anuncio = require('../models/anuncio.model');
-    const Archivo = require('../models/archivo.model');
     const anuncios = await Anuncio.findAll({
-        include: {
-            model: Archivo,
-            attributes: ['path']
-        },
         where: {
             [Op.or]:[
                 {createdAt: { [Op.gt]: lastSincro }},
@@ -202,13 +264,13 @@ const crearAnuncio = async (req, res) => {
 
     const data = {
         descripcion: req.body.descripcion,
-        url: req.body.url
+        url: req.body.url,
+        path: pathStr+filename,
     };
     try{
-        data.idArchivo = await guardarImagen(req.file);
         const Anuncio = require('../models/anuncio.model');
-    
         let anuncio = await Anuncio.create(data);
+        await moverImagen();
         response(res,HttpStatus.OK,`Anuncio guardado: ${anuncio.id}`);
     }catch(error){
         response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al guardar anuncio`);
@@ -283,7 +345,6 @@ const eliminarAnuncio = async (req, res) => {
     }
 }
 
-
 const eliminarFotoTmp = async (file) => {
     if(!file) return;
     try{
@@ -293,23 +354,26 @@ const eliminarFotoTmp = async (file) => {
     }
 }
 
-const guardarImagen = async (file) => {
+const moverImagen = async (file) => {
     if(!file) return;
 
     let {filename, destination} = file;
     
     try{
-        //inserta archivo
-        const Archivo = require('../models/archivo.model');
-        let archivo = await Archivo.create({path: pathStr+filename})
-
         //mueve el archivo
         await fs.move(destination + filename, uploadFolder + filename);
-        return archivo.id;
     }catch(error){
         logger.error(error);
         return null;
     }
 };
 
-module.exports = {getUsuarios,modificarUsuario,obtenerAnuncios, crearAnuncio, actualizarAnuncio, eliminarAnuncio};
+module.exports = {
+    getUsuarios,
+    modificarUsuario,
+    obtenerAnuncios,
+    crearAnuncio, 
+    actualizarAnuncio, 
+    eliminarAnuncio,
+    agregarAdmin,
+};

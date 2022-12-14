@@ -4,9 +4,20 @@ const jwt = require('jsonwebtoken');
 const HttpStatus = require('../util/http.status');
 const dotenv = require('dotenv');
 const Validator = require('validatorjs');
-const crypto = require('crypto');
-const {enviarCorreo, contentVerificacion, contentNuevaClave} = require('../util/mail');
+const {
+    enviarCorreo, 
+    enviarCorreoAdmins,
+    contentVerificacion, 
+    contentNuevaClave, 
+    contentNotifAdminDistribRegistrado, 
+    contentNotifDistribRegistrado
+} = require('../util/mail');
 const {Op} = require('sequelize');
+const MINUTO = 60000;   //en milisegundos
+const HORA = MINUTO*60;
+const DIA = HORA*24;
+const MES = DIA*30;
+const {generarCodigo, sha256} = require('../util/utils');
 
 dotenv.config();
 //Validator.useLang('es');
@@ -27,14 +38,9 @@ const login = async (req, res) => {
     let {correo, clave} = req.body;
 
     //Consultamos a BD
-    const Usuario = require('../models/usuario.model');
-    const Archivo = require('../models/archivo.model');
+    const {Usuario}= require('../models/usuario.model');
     const usuario = await Usuario.findOne({
-        include: {
-            model: Archivo,
-            attributes: ['path']
-        },
-        where: {correo: correo}
+        where: {correo: correo, estado: { [Op.not]: 0 }}    //No Inactivos (0)
     });
     if(!usuario){
         //No hay correo registrado
@@ -42,11 +48,11 @@ const login = async (req, res) => {
         return;
     }
     if(usuario.clave === sha256(clave)){//Se comprueba si la clave es correcta
-        if(usuario.idTipoUsuario == 3 && !usuario.distAct){
+        if(usuario.idTipoUsuario == 3 && usuario.estado == 2){  //Verificando (2) distribuidor
             response(res,HttpStatus.UNPROCESABLE_ENTITY,`Activación de distribuidor pendiente`);
             return;
         }
-        if(usuario.verificado){
+        if(usuario.estado == 1){    //Activo (1)
 
             usuario.clave = null;
             let {expDate, token} = generarToken(usuario);
@@ -55,7 +61,7 @@ const login = async (req, res) => {
                 usuario: usuario,
                 jwt: token
             });
-        }else{
+        }else{  //Verificando (2)
             response(res,HttpStatus.OK,`Verificación pendiente`, {
                 usuario: usuario
             });
@@ -97,31 +103,36 @@ const signUp = async (req, res) => {
     };
 
     //Comprobar si correo ya existe
-    const Usuario = require('../models/usuario.model');
+    const {Usuario} = require('../models/usuario.model');
     const usuExist = await Usuario.findOne({where:{correo: data.correo}});
     if(usuExist){
-        //Si existe usuario ya registrado
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Correo ya registrado`);
-        return;
+        if(usuExist.estado != 0){ 
+            //Si existe usuario ya registrado
+            response(res,HttpStatus.UNPROCESABLE_ENTITY,`Correo ya registrado`);
+            return;
+        }
+        //Usuario Inactivo(0), se elimina
+        await usuExist.destroy();
     }
     //Procede a insertar usuario
     Usuario.create(data)
     .then(async nuevoUsuario => {
-        let {id, correo, idTipoUsuario, distAct} = nuevoUsuario;
+        let {idTipoUsuario, correo, razonSocial, nroDocumento} = nuevoUsuario;
         
         //TODO: Si el tipo de usuario creado es Distribuidor, comunicar a los administradores para su activacion
-        if(idTipoUsuario == 3 && !distAct){
+        if(idTipoUsuario == 3){ // Verificando(2)
+            //Notifico a usuario distribuidor su registro
+            const mensajeDis = contentNotifDistribRegistrado(razonSocial, nroDocumento);
+            enviarCorreo(correo, mensajeDis.subject, mensajeDis.body);
+            //Notifico a administradores la verificacion y aprobacion del nuevo registro
+            const mensajeAdm = contentNotifAdminDistribRegistrado(correo, razonSocial, nroDocumento);
+            enviarCorreoAdmins(mensajeAdm.subject, mensajeAdm.body);
+
             response(res,HttpStatus.OK,`Activación de distribuidor pendiente`,{ usuario: nuevoUsuario});
             return;
         }
-        //Se genera un codigo de 6 digitos para validar correo
-        const CodigoVerificacion = require('../models/codigo.verificacion.model');
-        let codigo = generarCodigo();
-        let exp = Date.now() + 300000; //expira en 5 min
-        await CodigoVerificacion.create({codigo: codigo, exp: exp, idUsuario: id});
-        const content = contentVerificacion(codigo);
-        enviarCorreo(correo, content.subject, content.body);
-
+        
+        await generarCodigoVerificacion(nuevoUsuario);
         response(res,HttpStatus.OK,`Usuario registrado, se envió código de verificación a su correo`, { usuario: nuevoUsuario});
         return;
     }).catch(error => {
@@ -129,6 +140,22 @@ const signUp = async (req, res) => {
         response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error interno al guardar usuario`);
         return;
     });
+};
+
+const generarCodigoVerificacion = async (usuario)=>{
+    try{
+        //Se genera un codigo de 6 digitos para validar correo
+        const CodigoVerificacion = require('../models/codigo.verificacion.model');
+        let codigo = generarCodigo();
+        let exp = Date.now() + HORA;
+        const codVerif = await CodigoVerificacion.create({codigo: codigo, exp: exp});
+        await usuario.setCodigoVerificacion(codVerif);
+        let {correo} = usuario;
+        const content = contentVerificacion(codigo);
+        enviarCorreo(correo, content.subject, content.body);
+    }catch(error){
+        logger.error(error);
+    }
 };
 
 const confirmarCorreo = async (req, res) => {
@@ -144,47 +171,38 @@ const confirmarCorreo = async (req, res) => {
     let {id, codigo} = req.body;
 
     //Consultamos por codigo vigente
-    const CodigoVerificacion = require('../models/codigo.verificacion.model');
-    const Usuario = require('../models/usuario.model');
-    let codigoActual = await CodigoVerificacion.findOne({
-        where: {
-            idUsuario: id, 
-            codigo: codigo,
-            exp: {
-                [Op.gt]: Date.now()
-            },
-            estado: 1
+    const {Usuario} = require('../models/usuario.model');
+    //busco usuario por id
+    let usuarioVerificar = await Usuario.findOne({
+        where:{
+            id: id, 
+            estado: 2,  //Verificando(2)
         }
-    });
-    if(codigoActual){
+    })
+    if(!usuarioVerificar){
+        response(res,HttpStatus.NOT_FOUND,`Usuario no encontrado`);
+        return;
+    }
+
+    let codigoActual = await usuarioVerificar.getCodigoVerificacion();
+    if(codigoActual!=null && codigoActual.codigo == codigo && codigoActual.exp > Date.now()){
         //Codigo valido, se procede a confirmar
-        codigoActual.estado = 0;
-        await codigoActual.save();
-        const Archivo = require('../models/archivo.model');
-
-        let usuarioConfirmar = await Usuario.findOne({
-            include: {
-                model: Archivo,
-                attributes: ['path']
-            },
-            where:{id:id}
-        });
-        usuarioConfirmar.verificado = 1;
-        usuarioConfirmar.save();
-
+        await usuarioVerificar.setCodigoVerificacion(null);
+        usuarioVerificar.estado = 1; //Activo(1)
+        await usuarioVerificar.save();
 
         //Se genera nuevo token para sesion
-        usuarioConfirmar.clave = null;
-        let {expDate, token} = generarToken(usuarioConfirmar);
+        usuarioVerificar.clave = null;
+        let {expDate, token} = generarToken(usuarioVerificar);
         response(res,HttpStatus.OK,`Correo confirmado. Sesión iniciada`, {
             exp: expDate,
-            usuario: usuarioConfirmar,
+            usuario: usuarioVerificar,
             jwt: token
         });
     }else{
         //No hay codigo
+        await usuarioVerificar.setCodigoVerificacion(null);
         response(res,HttpStatus.NOT_FOUND,`Código inválido`);
-        return;
     }
 };
 
@@ -200,30 +218,24 @@ const solicitarCodigoVerificacion = async (req, res) => {
     let id = req.body.id;
 
     //Consultamos a BD
-    const Usuario = require('../models/usuario.model');
-    const usuario = await Usuario.findOne({ where: {id: id}});
+    const {Usuario} = require('../models/usuario.model');
+    const usuario = await Usuario.findOne({ where: {id: id, estado: { [Op.not]: 0}}});
     if(!usuario){
         //No hay correo registrado
         response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo no registrado.');
         return;
-    }else{
-        let {correo, verificado, idTipoUsuario, distAct} = usuario;
-        if(idTipoUsuario == 3 && !distAct){
+    }else if(usuario.estado==1){
+        //Correo ya fue verificado
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo ya verificado.');
+        return;
+    }else{  //Estado: Verificando(2)
+        let {idTipoUsuario} = usuario;
+        if(idTipoUsuario == 3){
             response(res,HttpStatus.UNPROCESABLE_ENTITY,`Activación de distribuidor pendiente`);
             return;
         }
-        if(verificado){
-            //El correo ya fue verificado antes
-            response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo ya verificado.');
-            return;
-        }
-        //Se genera un codigo de 6 digitos para validar correo
-        const CodigoVerificacion = require('../models/codigo.verificacion.model');
-        let codigo = generarCodigo();
-        let exp = Date.now() + 300000; //expira en 5 min
-        await CodigoVerificacion.create({codigo: codigo, exp: exp, idUsuario: id});
-        const content = contentVerificacion(codigo);
-        enviarCorreo(correo, content.subject, content.body);
+
+        await generarCodigoVerificacion(usuario);
         
         response(res,HttpStatus.OK,'Se envió código de verificación a su correo.');
     }
@@ -241,23 +253,25 @@ const solicitarCodigoNuevaClave = async (req, res) => {
     let correo = req.body.correo;
 
     //Consultamos a BD
-    const Usuario = require('../models/usuario.model');
-    const usuario = await Usuario.findOne({ where: {correo: correo}});
+    const {Usuario} = require('../models/usuario.model');
+    const usuario = await Usuario.findOne({ where: {correo: correo, estado: { [Op.not]: 0}}});
     if(!usuario){
         //No hay correo registrado
         response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo no registrado.');
         return;
     }else{
-        let {id,idTipoUsuario,distAct} = usuario;
-        if(idTipoUsuario == 3 && !distAct){
+        let {idTipoUsuario,estado} = usuario;
+        if(idTipoUsuario == 3 && estado == 2){
             response(res,HttpStatus.UNPROCESABLE_ENTITY,`Activación de distribuidor pendiente`);
             return;
         }
         //Se genera un codigo de 6 digitos para validar correo
         const CodigoRenuevaClave = require('../models/codigo.renovar.clave.model');
         let codigo = generarCodigo();
-        let exp = Date.now() + 300000; //expira en 5 min
-        await CodigoRenuevaClave.create({codigo: codigo, exp: exp, idUsuario: id});
+        let exp = Date.now() + HORA;
+        const codigoRenCla = await CodigoRenuevaClave.create({codigo: codigo, exp: exp});
+        await usuario.setCodigoRenuevaClave(codigoRenCla);
+
         const content = contentNuevaClave(codigo);
         enviarCorreo(correo, content.subject, content.body);
         
@@ -278,47 +292,27 @@ const cambiarClave = async (req, res) => {
 
     let {correo, clave, codigo} = req.body;
 
-    const Usuario = require('../models/usuario.model');
-    const Archivo = require('../models/archivo.model');
-    const CodigoRenuevaClave = require('../models/codigo.renovar.clave.model');
+    const {Usuario} = require('../models/usuario.model');
 
     const usuario = await Usuario.findOne({
-        include: {
-            model: Archivo,
-            attributes: ['path']
-        },
-        where: {correo: correo}
+        where: {correo: correo}, estado: { [Op.not]: 0}
     });
 
     if(!usuario){
         response(res,HttpStatus.UNPROCESABLE_ENTITY,'Correo no registrado.');
         return;
     }else{
-        let idUsuario = usuario.id;
-        const codigoRenueva = await CodigoRenuevaClave.findOne({
-            where: {
-                idUsuario: idUsuario, 
-                codigo: codigo,
-                exp: {
-                    [Op.gt]: Date.now()
-                },
-                estado: 1
-            }
-        });
-        if(!codigoRenueva){
-            response(res,HttpStatus.UNPROCESABLE_ENTITY,'Código inválido.');
-            return;
-        }else{
+        const codigoRenueva = await usuario.getCodigoRenuevaClave();
+        if(codigoRenueva!=null && codigoRenueva.codigo == codigo && codigoRenueva.exp > Date.now()){
             //cambia clave
             usuario.clave = sha256(clave);
             await usuario.save();
 
-            codigoRenueva.estado = 0;
-            await codigoRenueva.save();
+            await usuario.setCodigoRenuevaClave(null);
 
-            let {verificado} = usuario;
+            let {estado} = usuario;
             
-            if(verificado){
+            if(estado==1){  //Activo(1)
                 //se genera nuevo token para iniciar sesion
                 usuario.clave = null;
                 let {expDate, token} = generarToken(usuario);
@@ -327,26 +321,22 @@ const cambiarClave = async (req, res) => {
                     usuario: usuario,
                     jwt: token
                 });
-            }else{
+            }else{  //Verificando(2)
                 response(res,HttpStatus.OK,`Verificación pendiente`, {
                     usuario: usuario
                 });
             }
+            
+        }else{
+            response(res,HttpStatus.UNPROCESABLE_ENTITY,'Código inválido.');
+            return;
         }
     }
 
 };
 
-const sha256 = (secret) => {
-    return crypto.createHash('sha256').update(secret).digest('hex');
-};
-
-const generarCodigo = () => {
-    return Math.floor(100000 + Math.random() * 900000);
-}
-
 const generarToken = (usuario) => {
-    let exp = Math.floor(Date.now() / 1000) + (60 * 60);
+    let exp = Math.floor((Date.now() + MES) / 1000);
     let expDate = (new Date(exp*1000)).toISOString();
     let token = jwt.sign({
         exp: exp,

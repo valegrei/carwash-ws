@@ -1,6 +1,6 @@
 const express = require('express');
 const {getUsuario, updateUsuario} = require('../controller/usuario.controller');
-const multer  = require('multer');
+/*const multer  = require('multer');
 const path = require('path');
 const uuid4 = require('uuid4');
 
@@ -13,11 +13,11 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({storage: storage});
+const upload = multer({storage: storage});*/
 const usuarioRoutes = express.Router();
 
 usuarioRoutes.route('/:id')
     .get(getUsuario)
-    .post(upload.single('foto'),updateUsuario);
+    .put(updateUsuario); //.post(upload.single('foto'),updateUsuario);
 
 module.exports = usuarioRoutes;

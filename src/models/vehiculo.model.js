@@ -1,7 +1,5 @@
 const { DataTypes, Model } = require('sequelize');
 const db = require('.');
-const Archivo = require('./archivo.model')
-const Usuario = require('./usuario.model');
 
 class Vehiculo extends Model{}
 
@@ -21,19 +19,9 @@ Vehiculo.init({
     year: {
         type: DataTypes.SMALLINT
     },
-    idUsuario: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: Usuario,
-            key: 'id'
-        }
-    },
-    idArchivo: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: Archivo,
-            key: 'id'
-        }
+    path: {
+        type: DataTypes.STRING(100),
+        allowNull: false
     },
     estado: {
         type: DataTypes.BOOLEAN,

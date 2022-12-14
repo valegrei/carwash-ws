@@ -2,9 +2,9 @@ const {response} = require('../domain/response');
 const logger = require('../util/logger');
 const HttpStatus = require('../util/http.status');
 const Validator = require('validatorjs');
-const fs = require('fs-extra');
+/*const fs = require('fs-extra');
 const uploadFolder = 'uploads/images/profile/';
-const pathStr = '/files/images/profile/';
+const pathStr = '/files/images/profile/';*/
 
 /**
  * Obtiene datos del mismo usuario que lo solicita
@@ -27,15 +27,10 @@ const getUsuario = async (req, res) => {
         return;
     }
 
-    const Usuario = require('../models/usuario.model');
-    const Archivo = require('../models/archivo.model');
+    const {Usuario} = require('../models/usuario.model');
 
     let usuario = await Usuario.findOne({
-        include:{
-            model: Archivo,
-            attributes: ['path']
-        },
-        where:{id: idUsuario, estado: true}
+        where:{id: idUsuario, estado: 1}
     });
 
     if(!usuario){
@@ -67,7 +62,6 @@ const updateUsuario = async (req, res) => {
     let idAuthUsu = req.auth.data.idUsuario;
     let idUsuario = req.params.id;
     if(idAuthUsu!= idUsuario){
-        eliminarFotoTmp(req.file);
         response(res,HttpStatus.UNAUTHORIZED,`Solo puede modificar por el mismo id`);
         return;
     }
@@ -82,10 +76,8 @@ const updateUsuario = async (req, res) => {
         nroCel1: 'string',
         nroCel2: 'string',
         idTipoDocumento: 'required|integer',
-        eliminarFoto: 'boolean',
     });
     if(validator.fails()){
-        eliminarFotoTmp(req.file);
         response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
         return;
     }
@@ -102,25 +94,12 @@ const updateUsuario = async (req, res) => {
         idTipoDocumento: req.body.idTipoDocumento
     };
 
-    if(req.body.eliminarFoto!= null && req.body.eliminarFoto){
-        //desactiva archivos de perfil anteriores
-        data.idArchivoFoto = null;
-    }else{
-        //guarda foto
-        await guardarFoto(idUsuario, req.file);
-    }
-
-    const Usuario = require('../models/usuario.model');
-    const Archivo = require('../models/archivo.model');
-    await Usuario.update(data,{where:{id: idUsuario, estado: true}});
+    const {Usuario} = require('../models/usuario.model');
+    await Usuario.update(data,{where:{id: idUsuario, estado: 1}});
 
     //obtiene usuario actualizado
     const usuario = await Usuario.findOne({
-        include:{
-            model: Archivo,
-            attributes: ['path']
-        },
-        where:{id: idUsuario, estado: true}
+        where:{id: idUsuario, estado: 1}
     });
 
     if(!usuario){
@@ -133,7 +112,7 @@ const updateUsuario = async (req, res) => {
         return;
     }
 };
-
+/*
 const eliminarFotoTmp = async (file) => {
     if(!file) return;
     try{
@@ -164,6 +143,6 @@ const guardarFoto = async (idUsuario, file) => {
     }catch(error){
         logger.error(error);
     }
-};
+};*/
 
 module.exports = {getUsuario, updateUsuario};

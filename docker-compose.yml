@@ -30,6 +30,7 @@ services:
     restart: unless-stopped
     env_file: ./.env
     volumes:
+      - ../tmp_files:/usr/code/tmp_uploads
       - ../upload_files:/usr/code/uploads
     ports:
       - $NODE_LOCAL_PORT:$NODE_DOCKER_PORT

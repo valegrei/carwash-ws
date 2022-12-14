@@ -1,8 +1,60 @@
 const { DataTypes, Model } = require('sequelize');
-const TipoDocumento = require('./tipo.documento.model');
-const TipoUsuario = require('./tipo.usuario.model'); 
 const db = require('.');
-const Archivo = require('./archivo.model');
+const CodigoRenuevaClave = require('./codigo.renovar.clave.model');
+const CodigoVerificacion = require('./codigo.verificacion.model');
+const Vehiculo = require('./vehiculo.model');
+
+class TipoDocumento extends Model{}
+
+TipoDocumento.init({
+    id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        primaryKey: true
+    },
+    nombre: {
+        type: DataTypes.STRING(4)
+    },
+    cntDigitos: {
+        type: DataTypes.INTEGER
+    },
+}, {
+    sequelize: db.sequelize,
+    timestamps: false
+});
+
+class TipoUsuario extends Model{}
+
+TipoUsuario.init({
+    id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        primaryKey: true
+    },
+    nombre: {
+        type: DataTypes.STRING(25)
+    },
+}, {
+    sequelize: db.sequelize,
+    timestamps: false
+});
+
+class EstadoUsuario extends Model{}
+
+EstadoUsuario.init({
+    id: {
+        type: DataTypes.INTEGER,
+        allowNulls: false,
+        primaryKey: true
+    },
+    nombre: {
+        type: DataTypes.STRING(11),
+        timestamps: false
+    },
+},{
+    sequelize: db.sequelize,
+    timestamps: false
+});
 
 class Usuario extends Model{}
 
@@ -43,20 +95,14 @@ Usuario.init({
     nroCel2: {
         type: DataTypes.STRING(20)
     },
-    distAct: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: 0
-    },
-    verificado: {
-        type: DataTypes.BOOLEAN,
-        allowNulls: false,
-        defaultValue: 0
-    },
     estado: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: 1,
-        allowNulls: false
+        type: DataTypes.INTEGER,
+        defaultValue: 2,
+        allowNulls: false,
+        references: {
+            model: EstadoUsuario,
+            key: 'id'
+        }
     },
     idTipoUsuario: {
         type: DataTypes.INTEGER,
@@ -75,7 +121,16 @@ Usuario.init({
 },{
     sequelize: db.sequelize
 });
+Usuario.hasOne(CodigoRenuevaClave);
+CodigoRenuevaClave.belongsTo(Usuario);
+Usuario.hasOne(CodigoVerificacion);
+CodigoVerificacion.belongsTo(Usuario);
+Usuario.hasMany(Vehiculo);
+Vehiculo.belongsTo(Usuario);
 
-Usuario.belongsTo(Archivo,{foreignKey:'idArchivoFoto'});
-
-module.exports = Usuario;
+module.exports = {
+    Usuario,
+    EstadoUsuario,
+    TipoDocumento,
+    TipoUsuario,
+};
