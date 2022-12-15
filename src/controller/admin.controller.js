@@ -397,6 +397,8 @@ const crearAnuncio = async (req, res) => {
         return;
     }
 
+    let {filename} = req.file;
+
     const data = {
         descripcion: req.body.descripcion,
         url: req.body.url,
@@ -405,7 +407,7 @@ const crearAnuncio = async (req, res) => {
     try{
         const Anuncio = require('../models/anuncio.model');
         let anuncio = await Anuncio.create(data);
-        await moverImagen();
+        await moverImagen(req.file);
         response(res,HttpStatus.OK,`Anuncio guardado: ${anuncio.id}`);
     }catch(error){
         response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al guardar anuncio`);
