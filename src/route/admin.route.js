@@ -7,6 +7,9 @@ const {
     actualizarAnuncio, 
     eliminarAnuncio,
     agregarAdmin,
+    getParametros,
+    actualizarParametros,
+    actualizarParametrosCorreo,
 } = require('../controller/admin.controller');
 const multer = require('multer');
 const uuid4 = require('uuid4');
@@ -24,6 +27,14 @@ const storage = multer.diskStorage({
 const upload = multer({storage: storage});
 
 const adminRoutes = express.Router();
+
+
+adminRoutes.route('/parametros')
+    .get(getParametros)
+    .put(actualizarParametros);
+    
+adminRoutes.route('/parametros/correo')
+    .put(actualizarParametrosCorreo);
 
 adminRoutes.route('/usuarios')
     .get(getUsuarios)

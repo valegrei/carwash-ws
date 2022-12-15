@@ -44,7 +44,10 @@ const enviarCorreoGen = (correoDesde, passDesde, correoDestino, correosCCO, asun
     };
 
     let transporter = nodemailer.createTransport({
-        service: 'gmail',
+        //service: 'gmail',
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true,
         auth: {
           user: correoDesde,
           pass: passDesde,
@@ -56,6 +59,20 @@ const enviarCorreoGen = (correoDesde, passDesde, correoDestino, correosCCO, asun
             logger.info(`Email sent: ${info.response}`);
         }
     });
+};
+
+const verifyConfig = async (host, port, secure) => {
+    try{
+        let transporter = nodemailer.createTransport({
+            host: host,
+            port: port,
+            secure: secure!=0,
+        });
+        return await transporter.verify();
+    }catch(error){
+        logger.error(error);
+        return false;
+    }
 };
 
 const contentNotifDistribActivado = (razSocial, ruc) => {
@@ -115,4 +132,5 @@ module.exports = {
     contentNotifDistribRegistrado, 
     contentNotifAdminDistribRegistrado,
     contentNotifAdminRegistrado,
+    verifyConfig,
 };

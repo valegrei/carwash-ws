@@ -18,8 +18,11 @@ const initData = async () => {
     logger.info('Datos de ParametroTipo cargados');
 
     await Parametro.bulkCreate([
-        {clave: 'APP_EMAIL_ADDR', orden: 1, idTipo: 1, valor: 'carwashperuapp@gmail.com'},
-        {clave: 'APP_EMAIL_PASS', orden: 1, idTipo: 1, valor: 'buitsphcuodcycjj'},
+        {clave: 'EMAIL_HOST', idTipo: 1, valor: 'smtp.gmail.com'},
+        {clave: 'EMAIL_PORT', idTipo: 1, valor: '465'},
+        {clave: 'EMAIL_SSL_TLS', idTipo: 1, valor: '1'},
+        {clave: 'EMAIL_ADDR', idTipo: 1, valor: 'carwashperuapp@gmail.com'},
+        {clave: 'EMAIL_PASS', idTipo: 1, valor: 'buitsphcuodcycjj'},
     ],{
         ignoreDuplicates: true
     });
@@ -61,7 +64,8 @@ const initData = async () => {
             apellidoPaterno: 'Alegre',
             apellidoMaterno: 'Ibáñez',
             idTipoUsuario: 1,
-            idTipoDocumento: 1
+            idTipoDocumento: 1,
+            estado: 1,
         },
     ],{
         ignoreDuplicates: true

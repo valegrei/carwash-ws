@@ -15,6 +15,10 @@ ParametroTipo.init({
         type: DataTypes.STRING(100),
         allowNull: false
     },
+    orden: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
     estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: 1,
@@ -30,11 +34,6 @@ class Parametro extends Model{}
 Parametro.init({
     clave: {
         type: DataTypes.STRING(20),
-        allowNull: false,
-        primaryKey: true,
-    },
-    orden: {
-        type: DataTypes.INTEGER,
         allowNull: false,
         primaryKey: true,
     },

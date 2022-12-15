@@ -6,7 +6,12 @@ const {Op} = require('sequelize');
 const fs = require('fs-extra');
 const uploadFolder = 'uploads/images/anuncios/';
 const pathStr = '/files/images/anuncios/';
-const {enviarCorreo, contentNotifDistribActivado, contentNotifAdminRegistrado} = require('../util/mail');
+const {
+    enviarCorreo, 
+    contentNotifDistribActivado, 
+    contentNotifAdminRegistrado,
+    verifyConfig,
+} = require('../util/mail');
 const {generarCodigo, sha256} = require('../util/utils');
 
 const verificarAdmin = async (req,res) => {
@@ -20,6 +25,136 @@ const verificarAdmin = async (req,res) => {
         return;
     }
 }
+
+
+/**
+ * Obtiene lista de parametros segun fecha de ultima sincronizacion
+ * Solo el usuario con Rol de Administrador tiene el permiso
+ */
+ const getParametros = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, obteniendo parametros`);
+
+    await verificarAdmin(req,res);
+
+    //Validamos
+    let validator = new Validator(req.query,{
+        lastSincro: 'required|date',
+    });
+    if(validator.fails()){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`lastSincro faltante`);
+        return;
+    }
+
+    let lastSincro = req.query.lastSincro;
+    const {Parametro} = require('../models/parametro.model');
+
+    let parametros = await Parametro.findAll({
+        attributes: ['clave', 'valor', 'idTipo'],
+        where:{
+            [Op.or]:[
+                {createdAt: { [Op.gt]: lastSincro }},
+                {updatedAt: { [Op.gt]: lastSincro }}
+            ]
+        }
+    });
+    
+    if(!parametros.length){
+        //vacio
+        response(res,HttpStatus.NOT_FOUND,`No hay parametros.`);
+    }else{
+        response(res,HttpStatus.OK,`Parametros encontrados`,{parametros: parametros});
+    }
+};
+
+
+/**
+ * Obtiene lista de parametros segun fecha de ultima sincronizacion
+ * Solo el usuario con Rol de Administrador tiene el permiso
+ */
+ const actualizarParametros = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, actualizando parametros`);
+
+    await verificarAdmin(req,res);
+
+    //Validamos
+    let validator = new Validator(req.body,{
+        'params.*.clave': 'required|string',
+        'params.*.valor': 'required|string',
+        'params.*.idTipo': 'required|integer',
+    });
+    if(validator.fails()){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`datos erroneos`);
+        return;
+    }
+
+    try{
+        const {Parametro} = require('../models/parametro.model');
+        let params = req.body.params;
+        params = params.map(e => e.updatedAt = Date.now());
+    
+        await Parametro.bulkCreate(params,{
+            updateOnDuplicate: ['valor', 'updatedAt']
+        });
+        
+        response(res,HttpStatus.OK,`Parametros actualizados`);
+    }catch(error){
+        logger.error(error);
+        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al actualizar parametros`);
+    }
+};
+
+/**
+ * Obtiene lista de parametros segun fecha de ultima sincronizacion
+ * Solo el usuario con Rol de Administrador tiene el permiso
+ */
+ const actualizarParametrosCorreo = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, actualizando parametros`);
+
+    await verificarAdmin(req,res);
+
+    //Validamos
+    let validator = new Validator(req.body,{
+        'host': 'required|string',
+        'port': 'required|string',
+        'secure': 'required|integer',
+        'address': 'required|string',
+        'pass': 'required|string',
+    });
+    if(validator.fails()){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`datos faltantes`);
+        return;
+    }
+
+    try{
+        const {host, port, secure, address, pass} = req.body;
+
+        if(await verifyConfig(host, port, secure)){
+            const {Parametro} = require('../models/parametro.model');
+            const updatedAt = Date.now();
+
+            await Parametro.bulkCreate([
+                {clave: 'EMAIL_HOST', valor: host, idTipo: 1, updatedAt: updatedAt},
+                {clave: 'EMAIL_PORT', valor: port, idTipo: 1, updatedAt: updatedAt},
+                {clave: 'EMAIL_SSL_TLS', valor: secure, idTipo: 1, updatedAt: updatedAt},
+                {clave: 'EMAIL_ADDR', valor: address, idTipo: 1, updatedAt: updatedAt},
+                {clave: 'EMAIL_PASS', valor: pass, idTipo: 1, updatedAt: updatedAt},
+            ],{
+                updateOnDuplicate: ['valor','updatedAt']
+            });
+            
+            response(res,HttpStatus.OK,`Parametros actualizados`);
+        }else{
+            response(res,HttpStatus.UNPROCESABLE_ENTITY,`Parametros de SMTP no validos`);
+        }
+    }catch(error){
+        logger.error(error);
+        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al actualizar parametros`);
+    }
+};
+
 
 /**
  * Obtiene lista de usuarios segun fecha de ultima sincronizacion
@@ -376,4 +511,7 @@ module.exports = {
     actualizarAnuncio, 
     eliminarAnuncio,
     agregarAdmin,
+    getParametros,
+    actualizarParametros,
+    actualizarParametrosCorreo,
 };
