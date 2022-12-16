@@ -10,6 +10,8 @@ const {
     getParametros,
     actualizarParametros,
     actualizarParametrosCorreo,
+    actualizarParametrosSMTP,
+    probarCorreo
 } = require('../controller/admin.controller');
 const multer = require('multer');
 const uuid4 = require('uuid4');
@@ -32,8 +34,12 @@ const adminRoutes = express.Router();
 adminRoutes.route('/parametros')
     .get(getParametros)
     .put(actualizarParametros);
+
+adminRoutes.route('/parametros/smtp')
+    .put(actualizarParametrosSMTP);
     
 adminRoutes.route('/parametros/correo')
+    .post(probarCorreo)
     .put(actualizarParametrosCorreo);
 
 adminRoutes.route('/usuarios')

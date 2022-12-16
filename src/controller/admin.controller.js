@@ -11,19 +11,21 @@ const {
     contentNotifDistribActivado, 
     contentNotifAdminRegistrado,
     verifyConfig,
+    contentTest,
 } = require('../util/mail');
 const {generarCodigo, sha256} = require('../util/utils');
 
 const verificarAdmin = async (req,res) => {
-    let idAuthUsu = req.auth.data.idUsuario;
+    const idAuthUsu = req.auth.data.idUsuario;
     const {Usuario} = require('../models/usuario.model');
     //verificamos si el usuario solicitante tiene el Rol de Administrador
-    let authUsu = await Usuario.findOne({where:{id:idAuthUsu, idTipoUsuario: 1, estado: 1}});
+    const authUsu = await Usuario.findOne({where:{id:idAuthUsu, idTipoUsuario: 1, estado: 1}});
     if(!authUsu){
         //No es usuario administrador
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
-        return;
+        return null;
     }
+    return authUsu;
 }
 
 
@@ -109,9 +111,9 @@ const verificarAdmin = async (req,res) => {
  * Obtiene lista de parametros segun fecha de ultima sincronizacion
  * Solo el usuario con Rol de Administrador tiene el permiso
  */
- const actualizarParametrosCorreo = async (req, res) => {
+ const actualizarParametrosSMTP = async (req, res) => {
 
-    logger.info(`${req.method} ${req.originalUrl}, actualizando parametros`);
+    logger.info(`${req.method} ${req.originalUrl}, actualizando parametros SMTP`);
 
     await verificarAdmin(req,res);
 
@@ -120,6 +122,50 @@ const verificarAdmin = async (req,res) => {
         'host': 'required|string',
         'port': 'required|string',
         'secure': 'required|integer',
+    });
+    if(validator.fails()){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`datos faltantes`);
+        return;
+    }
+
+    try{
+        const {host, port, secure} = req.body;
+
+        if(await verifyConfig(host, parseInt(port), parseInt(secure)!=0)){
+            const {Parametro} = require('../models/parametro.model');
+            const updatedAt = Date.now();
+
+            await Parametro.bulkCreate([
+                {clave: 'EMAIL_HOST', valor: host, idTipo: 1, updatedAt: updatedAt},
+                {clave: 'EMAIL_PORT', valor: port, idTipo: 1, updatedAt: updatedAt},
+                {clave: 'EMAIL_SSL_TLS', valor: secure, idTipo: 1, updatedAt: updatedAt},
+            ],{
+                updateOnDuplicate: ['valor','updatedAt']
+            });
+            
+            response(res,HttpStatus.OK,`Parametros SMTP actualizados`);
+        }else{
+            response(res,HttpStatus.UNPROCESABLE_ENTITY,`Parametros de SMTP no validos`);
+        }
+    }catch(error){
+        logger.error(error);
+        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al actualizar parametros SMTP`);
+    }
+};
+
+
+/**
+ * Obtiene lista de parametros segun fecha de ultima sincronizacion
+ * Solo el usuario con Rol de Administrador tiene el permiso
+ */
+ const actualizarParametrosCorreo = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, actualizando parametros correo`);
+
+    await verificarAdmin(req,res);
+
+    //Validamos
+    let validator = new Validator(req.body,{
         'address': 'required|string',
         'pass': 'required|string',
     });
@@ -129,32 +175,46 @@ const verificarAdmin = async (req,res) => {
     }
 
     try{
-        const {host, port, secure, address, pass} = req.body;
+        const {address, pass} = req.body;
+        const {Parametro} = require('../models/parametro.model');
+        const updatedAt = Date.now();
 
-        if(await verifyConfig(host, port, secure)){
-            const {Parametro} = require('../models/parametro.model');
-            const updatedAt = Date.now();
+        await Parametro.bulkCreate([
+            {clave: 'EMAIL_ADDR', valor: address, idTipo: 1, updatedAt: updatedAt},
+            {clave: 'EMAIL_PASS', valor: pass, idTipo: 1, updatedAt: updatedAt},
+        ],{
+            updateOnDuplicate: ['valor','updatedAt']
+        });
 
-            await Parametro.bulkCreate([
-                {clave: 'EMAIL_HOST', valor: host, idTipo: 1, updatedAt: updatedAt},
-                {clave: 'EMAIL_PORT', valor: port, idTipo: 1, updatedAt: updatedAt},
-                {clave: 'EMAIL_SSL_TLS', valor: secure, idTipo: 1, updatedAt: updatedAt},
-                {clave: 'EMAIL_ADDR', valor: address, idTipo: 1, updatedAt: updatedAt},
-                {clave: 'EMAIL_PASS', valor: pass, idTipo: 1, updatedAt: updatedAt},
-            ],{
-                updateOnDuplicate: ['valor','updatedAt']
-            });
-            
-            response(res,HttpStatus.OK,`Parametros actualizados`);
-        }else{
-            response(res,HttpStatus.UNPROCESABLE_ENTITY,`Parametros de SMTP no validos`);
-        }
+        response(res,HttpStatus.OK,`Parametros Correo actualizados`);
     }catch(error){
         logger.error(error);
-        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al actualizar parametros`);
+        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al actualizar parametros correo`);
     }
 };
 
+
+/**
+ * Se prueba el correo
+ * Solo el usuario con Rol de Administrador tiene el permiso
+ */
+ const probarCorreo = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, probando correo`);
+
+    const adminUsu = await verificarAdmin(req,res);
+
+    try{
+        const {correo} = adminUsu;
+        const content = contentTest();
+        enviarCorreo(correo,content.subject, content.body)
+
+        response(res,HttpStatus.OK,`Se envio correo de prueba`);
+    }catch(error){
+        logger.error(error);
+        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al probar correo`);
+    }
+};
 
 /**
  * Obtiene lista de usuarios segun fecha de ultima sincronizacion
@@ -516,4 +576,6 @@ module.exports = {
     getParametros,
     actualizarParametros,
     actualizarParametrosCorreo,
+    actualizarParametrosSMTP,
+    probarCorreo,
 };
