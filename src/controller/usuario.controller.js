@@ -2,6 +2,7 @@ const {response} = require('../domain/response');
 const logger = require('../util/logger');
 const HttpStatus = require('../util/http.status');
 const Validator = require('validatorjs');
+const {generarCodigo, sha256} = require('../util/utils');
 /*const fs = require('fs-extra');
 const uploadFolder = 'uploads/images/profile/';
 const pathStr = '/files/images/profile/';*/
@@ -112,6 +113,62 @@ const updateUsuario = async (req, res) => {
         return;
     }
 };
+/**
+ * Cambia la clave del usuario
+ */
+const cambiarPassword = async (req, res) => {
+    logger.info(`${req.method} ${req.originalUrl}, cambiando clave de usuario`);
+    
+    //Validamos Id
+    let validator = new Validator(req.params,{
+        id: 'required|integer',
+    });
+    if(validator.fails()){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`id faltante`);
+        return;
+    }
+    let idAuthUsu = req.auth.data.idUsuario;
+    let idUsuario = req.params.id;
+    if(idAuthUsu!= idUsuario){
+        response(res,HttpStatus.UNAUTHORIZED,`Solo puede modificar por el mismo id`);
+        return;
+    }
+
+    //Validamos datos ingresados
+    validator = new Validator(req.body, {
+        claveAnterior: 'required|string',
+        claveNueva: 'required|string',
+    });
+    if(validator.fails()){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
+        return;
+    }
+    try{
+        const {Usuario} = require('../models/usuario.model');
+        const usuario = await Usuario.findOne({
+            where:{id: idUsuario, estado: 1}
+        });
+
+        const {claveAnterior, claveNueva} = req.body;
+
+        if(usuario){
+            if(usuario.clave == sha256(claveAnterior)){
+                //procede a actualizar
+                usuario.clave = sha256(claveNueva);
+                await usuario.save();
+                response(res,HttpStatus.OK,`Usuario actualizado`);
+            }else{
+                response(res,HttpStatus.UNPROCESABLE_ENTITY,`Clave anterior incorrecta.`);
+            }
+        }else{
+            response(res,HttpStatus.NOT_FOUND,`Usuario no encontrado.`);
+        }
+    }catch(error){
+        logger.error(error);
+        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al cambiar clave.`);
+    }
+    
+};
 /*
 const eliminarFotoTmp = async (file) => {
     if(!file) return;
@@ -145,4 +202,4 @@ const guardarFoto = async (idUsuario, file) => {
     }
 };*/
 
-module.exports = {getUsuario, updateUsuario};
+module.exports = {getUsuario, updateUsuario, cambiarPassword};
