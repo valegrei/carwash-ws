@@ -3,3 +3,4 @@ db
 code
 temp_uploads
 uploads
+*.code-workspace
