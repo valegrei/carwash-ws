@@ -3,6 +3,11 @@ const CodigoVerificacion = require('./codigo.verificacion.model');
 const CodigoRenuevaClave = require('./codigo.renovar.clave.model');
 const Anuncio = require('./anuncio.model');
 const Vehiculo = require('./vehiculo.model');
+const Direccion = require('./direccion.model');
+const HorarioConfig = require('./horario.config.model');
+const Horario = require('./horario.model');
+const Reserva = require('./reserva.model');
+const Servicio = require('./servicio.model');
 const {ParametroTipo, Parametro} = require('./parametro.model');
 const logger = require('../util/logger');
 
