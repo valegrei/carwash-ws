@@ -56,7 +56,8 @@ const obtenerServicios = async (req, res) => {
             [Op.or]:[
                 {createdAt: { [Op.gt]: lastSincro }},
                 {updatedAt: { [Op.gt]: lastSincro }}
-            ]
+            ],
+            idDistrib: idUsuario,
         }
     });
     

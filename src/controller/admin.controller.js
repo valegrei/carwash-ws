@@ -299,7 +299,7 @@ const modificarUsuario = async (req, res) => {
 
         const usuario = await Usuario.findByPk(idUsuario);
 
-        const oldDistAct = usuario.distAct
+        const oldEstado = usuario.estado
         
         if(req.body.idTipoUsuario != null){
             usuario.idTipoUsuario = req.body.idTipoUsuario;
@@ -310,18 +310,15 @@ const modificarUsuario = async (req, res) => {
         if(req.body.nroDocumento != null){
             usuario.nroDocumento = req.body.nroDocumento;
         }
-        if(req.body.distAct != null){
-            usuario.distAct = req.body.distAct;
-        }
         if(req.body.estado != null){
             usuario.estado = req.body.estado;
         }
 
         await usuario.save();
 
-        if(!oldDistAct && usuario.distAct){
+        if(oldEstado==2 && usuario.estado==1){
             //Si se activa distribuidor
-            const content = contentNotifDistribActivado();
+            const content = contentNotifDistribActivado(usuario.razonSocial, usuario.nroDocumento);
             enviarCorreo(usuario.correo, content.subject, content.body);
         }
 
