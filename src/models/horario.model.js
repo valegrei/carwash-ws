@@ -25,15 +25,9 @@ Horario.init({
         defaultValue: 1,
         allowNulls: false
     },
-    idDistrib: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: Usuario,
-            key: 'id',
-        }
-    },
 }, {
     sequelize: db.sequelize
 });
+Horario.belongsTo(Usuario, {as: 'Distrib', foreignKey: 'idDistrib'});
 
 module.exports = Horario;

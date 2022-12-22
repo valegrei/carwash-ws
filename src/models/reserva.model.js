@@ -14,34 +14,6 @@ Reserva.init({
         primaryKey: true,
         autoIncrement: true
     },
-    idHorario: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: Horario,
-            key: 'id',
-        }
-    },
-    idCliente: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: Usuario,
-            key: 'id',
-        }
-    },
-    idVehiculo: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: Vehiculo,
-            key: 'id',
-        }
-    },
-    idServicio: {
-        type: DataTypes.INTEGER,
-        references: {
-            model: Servicio,
-            key: 'id',
-        }
-    },
     estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: 1,
@@ -50,5 +22,9 @@ Reserva.init({
 }, {
     sequelize: db.sequelize
 });
+Reserva.belongsTo(Horario, {foreignKey: 'idHorario'});
+Reserva.belongsTo(Usuario, {as: 'cliente', foreignKey: 'idCliente'});
+Reserva.belongsTo(Vehiculo, {foreignKey: 'idVehiculo'});
+Reserva.belongsTo(Servicio, {foreignKey: 'idServicio'});
 
 module.exports = Reserva;

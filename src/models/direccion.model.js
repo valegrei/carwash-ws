@@ -28,7 +28,6 @@ Direccion.init({
 }, {
     sequelize: db.sequelize
 });
-Usuario.hasMany(Direccion);
-Direccion.belongsTo(Usuario);
+Direccion.belongsTo(Usuario, {foreignKey: 'idUsuario'});
 
 module.exports = Direccion;

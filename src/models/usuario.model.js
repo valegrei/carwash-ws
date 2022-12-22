@@ -2,7 +2,6 @@ const { DataTypes, Model } = require('sequelize');
 const db = require('.');
 const CodigoRenuevaClave = require('./codigo.renovar.clave.model');
 const CodigoVerificacion = require('./codigo.verificacion.model');
-const Vehiculo = require('./vehiculo.model');
 
 class TipoDocumento extends Model{}
 
@@ -121,12 +120,10 @@ Usuario.init({
 },{
     sequelize: db.sequelize
 });
-Usuario.hasOne(CodigoRenuevaClave);
-CodigoRenuevaClave.belongsTo(Usuario);
-Usuario.hasOne(CodigoVerificacion);
-CodigoVerificacion.belongsTo(Usuario);
-Usuario.hasMany(Vehiculo);
-Vehiculo.belongsTo(Usuario);
+Usuario.hasOne(CodigoRenuevaClave, {foreignKey: 'idUsuario'});
+CodigoRenuevaClave.belongsTo(Usuario, {foreignKey: 'idUsuario'});
+Usuario.hasOne(CodigoVerificacion, {foreignKey: 'idUsuario'});
+CodigoVerificacion.belongsTo(Usuario, {foreignKey: 'idUsuario'});
 
 module.exports = {
     Usuario,

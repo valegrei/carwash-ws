@@ -1,5 +1,6 @@
 const { DataTypes, Model } = require('sequelize');
 const db = require('.');
+const {Usuario} = require('./usuario.model')
 
 class Vehiculo extends Model{}
 
@@ -31,5 +32,6 @@ Vehiculo.init({
 }, {
     sequelize: db.sequelize
 });
+Vehiculo.belongsTo(Usuario, {as: 'cliente', foreignKey: 'idCliente'});
 
 module.exports = Vehiculo;

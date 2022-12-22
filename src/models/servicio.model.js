@@ -12,10 +12,12 @@ Servicio.init({
         autoIncrement: true
     },
     nombre: {
-        type: DataTypes.STRING(50)
+        type: DataTypes.STRING(50),
+        allowNull: false,
     },
     precio: {
         type: DataTypes.DECIMAL(18,2),
+        allowNull: false,
     },
     estado: {
         type: DataTypes.BOOLEAN,
@@ -25,7 +27,6 @@ Servicio.init({
 }, {
     sequelize: db.sequelize
 });
-Usuario.hasMany(Servicio);
-Servicio.belongsTo(Usuario);
+Servicio.belongsTo(Usuario,{as: 'distrib', foreignKey: 'idDistrib'});
 
 module.exports = Servicio;
