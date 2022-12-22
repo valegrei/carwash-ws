@@ -51,7 +51,7 @@ const obtenerServicios = async (req, res) => {
     const Servicio = require('../models/servicio.model');
 
     let servicios = await Servicio.findAll({
-        attributes: ['id', 'nombre', 'precio', 'estado'],
+        attributes: ['id', 'nombre', 'precio', 'estado', 'idDistrib'],
         where:{
             [Op.or]:[
                 {createdAt: { [Op.gt]: lastSincro }},
