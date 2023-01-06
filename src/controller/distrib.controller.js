@@ -168,8 +168,63 @@ const modificarServicio = async (req, res) => {
     }
 };
 
+
+const obtenerDirecciones = async (req, res) => {
+    
+    logger.info(`${req.method} ${req.originalUrl}, obteniendo direcciones`);
+
+    await verificarDistrib(req, res);
+
+    //Validamos
+    let validator = new Validator(req.params,{
+        id: 'required|integer',
+    });
+    if(validator.fails()){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`id faltante`);
+        return;
+    }
+
+    let idAuthUsu = req.auth.data.idUsuario;
+    let idUsuario = req.params.id;
+    if(idAuthUsu!= idUsuario){
+        response(res,HttpStatus.UNAUTHORIZED,`Solo puede acceder por el mismo id`);
+        return;
+    }
+
+    validator = new Validator(req.query,{
+        lastSincro: 'required|date',
+    });
+    if(validator.fails()){
+        response(res,HttpStatus.UNPROCESABLE_ENTITY,`lastSincro faltante`);
+        return;
+    }
+
+    let lastSincro = req.query.lastSincro;
+    const Direccion = require('../models/direccion.model');
+
+    let direcciones = await Direccion.findAll({
+        attributes: ['id', 'departamento', 'provincia', 'distrito', 'ubigeo',
+            'direccion', 'latitud', 'longitud', 'estado', 'idUsuario' ],
+        where:{
+            [Op.or]:[
+                {createdAt: { [Op.gt]: lastSincro }},
+                {updatedAt: { [Op.gt]: lastSincro }}
+            ],
+            idUsuario: idUsuario,
+        }
+    });
+    
+    if(!direcciones.length){
+        //vacio
+        response(res,HttpStatus.NOT_FOUND,`No hay direcciones.`);
+    }else{
+        response(res,HttpStatus.OK,`Direcciones encontrados`,{direcciones: direcciones});
+    }
+};
+
 module.exports = {
     obtenerServicios,
     agregarServicio,
     modificarServicio,
+    obtenerDirecciones,
 };

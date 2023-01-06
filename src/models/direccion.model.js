@@ -9,18 +9,27 @@ Direccion.init({
         type: DataTypes.INTEGER,
         allowNull: false,
         primaryKey: true,
-        autoIncrement: true
-    },
-    nombre: {
-        type: DataTypes.STRING(200)
-    },
-    latitud: {
+        autoIncrement: true,
+    }, departamento:{
+        type: DataTypes.STRING(50),
+        allowNull: false,
+    }, provincia:{
+        type: DataTypes.STRING(50),
+        allowNull: false,
+    }, distrito:{
+        type: DataTypes.STRING(50),
+        allowNull: false,
+    }, ubigeo:{
+        type: DataTypes.STRING(6),
+        allowNull: false,
+    }, direccion: {
+        type: DataTypes.STRING(200),
+        allowNull: false,
+    }, latitud: {
         type: DataTypes.DECIMAL(8,6),
-    },
-    longitud: {
+    }, longitud: {
         type: DataTypes.DECIMAL(9,6),
-    },
-    estado: {
+    }, estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: 1,
         allowNulls: false
