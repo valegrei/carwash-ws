@@ -1,6 +1,7 @@
 const { DataTypes, Model } = require('sequelize');
 const db = require('.');
 const {Usuario} = require('./usuario.model');
+const Direccion = require('./direccion.model');
 
 class Horario extends Model{}
 
@@ -12,13 +13,16 @@ Horario.init({
         autoIncrement: true
     },
     fecha: {
-        type: DataTypes.DATE
+        type: DataTypes.DATE,
+        allowNull: false,
     },
     horaIni: {
         type: DataTypes.TIME,
+        allowNull: false,
     },
     horaFin: {
         type: DataTypes.TIME,
+        allowNull: false,
     },
     estado: {
         type: DataTypes.BOOLEAN,
@@ -29,5 +33,6 @@ Horario.init({
     sequelize: db.sequelize
 });
 Horario.belongsTo(Usuario, {as: 'Distrib', foreignKey: 'idDistrib'});
+Horario.belongsTo(Direccion, {as: 'Local', foreignKey: 'idLocal'});
 
 module.exports = Horario;

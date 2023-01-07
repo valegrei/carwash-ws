@@ -20,6 +20,11 @@ Anuncio.init({
         type: DataTypes.STRING(100),
         allowNull: false
     },
+    mostrar: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: 1,
+        allowNulls: false
+    },
     estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: 1,

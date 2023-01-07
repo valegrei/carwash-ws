@@ -7,6 +7,10 @@ const {
     agregarDireccion,
     modificarDireccion,
     eliminarDireccion,
+    obtenerHorariosConfig,
+    agregarHorarioConfig,
+    modificarHorarioConfig,
+    eliminarHorarioConfig,
 } = require('../controller/distrib.controller');
 
 const distribRoutes = express.Router();
@@ -18,10 +22,19 @@ distribRoutes.route('/:id/servicio')
 
 distribRoutes.route('/:id/direccion')
     .get(obtenerDirecciones)
-    .post(agregarDireccion)
+    .post(agregarDireccion);
 
 distribRoutes.route('/:id/direccion/:idDireccion')
     .put(modificarDireccion)
-    .delete(eliminarDireccion)
+    .delete(eliminarDireccion);
+
+
+distribRoutes.route('/:id/horarioConfig')
+    .get(obtenerHorariosConfig)
+    .post(agregarHorarioConfig);
+
+distribRoutes.route('/:id/horarioConfig/:idHorarioConfig')
+    .put(modificarHorarioConfig)
+    .delete(eliminarHorarioConfig);
 
 module.exports = distribRoutes;

@@ -378,6 +378,235 @@ const eliminarDireccion = async (req, res) => {
     }
 }
 
+const obtenerHorariosConfig = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, obteniendo Configuraciones de Horario`);
+
+    await verificarDistrib(req, res);
+
+    //Validamos
+    let validator = new Validator(req.params, {
+        id: 'required|integer',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
+        return;
+    }
+
+    let idAuthUsu = req.auth.data.idUsuario;
+    let idUsuario = req.params.id;
+    if (idAuthUsu != idUsuario) {
+        response(res, HttpStatus.UNAUTHORIZED, `Solo puede acceder por el mismo id`);
+        return;
+    }
+
+    validator = new Validator(req.query, {
+        lastSincro: 'required|date',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
+        return;
+    }
+
+    let lastSincro = req.query.lastSincro;
+    const HorarioConfig = require('../models/horario.config.model');
+
+    let horarioConfigs = await HorarioConfig.findAll({
+        attributes: ['id', 'lunes', 'martes', 'miercoles', 'jueves',
+            'viernes', 'sabado', 'domingo', 'horaIni', 'minIni','horaFin',
+            'minFin','intervalo', 'estado', 'idDistrib'],
+        where: {
+            [Op.or]: [
+                { createdAt: { [Op.gt]: lastSincro } },
+                { updatedAt: { [Op.gt]: lastSincro } }
+            ],
+            idDistrib: idUsuario,
+        }
+    });
+
+    if (!horarioConfigs.length) {
+        //vacio
+        response(res, HttpStatus.NOT_FOUND, `No hay Configuraciones de Horario.`);
+    } else {
+        response(res, HttpStatus.OK, `Configuraciones de Horario encontrados`, { horarioConfigs: horarioConfigs });
+    }
+};
+
+
+const agregarHorarioConfig = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, creando Configuracion de Horario`);
+
+    await verificarDistrib(req, res);
+    //Validamos
+    let validator = new Validator(req.params, {
+        id: 'required|integer',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
+        return;
+    }
+
+    let idAuthUsu = req.auth.data.idUsuario;
+    let idUsuario = req.params.id;
+    if (idAuthUsu != idUsuario) {
+        response(res, HttpStatus.UNAUTHORIZED, `Solo puede agregar por el mismo id`);
+        return;
+    }
+
+    validator = new Validator(req.body, {
+        'lunes': 'required|boolean',
+        'martes': 'required|boolean',
+        'miercoles': 'required|boolean',
+        'jueves': 'required|boolean',
+        'viernes': 'required|boolean',
+        'sabado': 'required|boolean',
+        'domingo': 'required|boolean',
+        'horaIni': 'required|integer',
+        'minIni': 'required|integer',
+        'horaFin': 'required|integer',
+        'minFin': 'required|integer',
+        'intervalo': 'required|integer',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `datos erroneos`);
+        return;
+    }
+
+    try {
+        const data = {
+            lunes: req.body.lunes,
+            martes: req.body.martes,
+            miercoles: req.body.miercoles,
+            jueves: req.body.jueves,
+            viernes: req.body.viernes,
+            sabado: req.body.sabado,
+            domingo: req.body.domingo,
+            horaIni: req.body.horaIni,
+            minIni: req.body.minIni,
+            horaFin: req.body.horaFin,
+            minFin: req.body.minFin,
+            intervalo: req.body.intervalo,
+            idDistrib: idUsuario
+        }
+        const HorarioConfig = require('../models/horario.config.model');
+        const nuevoHorarioConfig = await HorarioConfig.create(data);
+
+        if (!nuevoHorarioConfig) {
+            response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al crear Configuracion de Horario`);
+        } else {
+            response(res, HttpStatus.OK, `Configuracion de Horario creado`);
+        }
+    } catch (error) {
+        logger.error(error);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al crear Configuracion de Horario`);
+    }
+};
+
+const modificarHorarioConfig = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, modificando Configuracion de Horario`);
+
+    await verificarDistrib(req, res);
+    //Validamos
+    let validator = new Validator(req.params, {
+        id: 'required|integer',
+        idHorarioConfig: 'required|integer'
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
+        return;
+    }
+
+    let idAuthUsu = req.auth.data.idUsuario;
+    let idUsuario = req.params.id;
+    if (idAuthUsu != idUsuario) {
+        response(res, HttpStatus.UNAUTHORIZED, `Solo puede agregar por el mismo id`);
+        return;
+    }
+
+    validator = new Validator(req.body, {
+        'lunes': 'required|boolean',
+        'martes': 'required|boolean',
+        'miercoles': 'required|boolean',
+        'jueves': 'required|boolean',
+        'viernes': 'required|boolean',
+        'sabado': 'required|boolean',
+        'domingo': 'required|boolean',
+        'horaIni': 'required|integer',
+        'minIni': 'required|integer',
+        'horaFin': 'required|integer',
+        'minFin': 'required|integer',
+        'intervalo': 'required|integer',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `datos erroneos`);
+        return;
+    }
+
+    try {
+        const idHorarioConfig = req.params.id;
+        const data = {
+            lunes: req.body.lunes,
+            martes: req.body.martes,
+            miercoles: req.body.miercoles,
+            jueves: req.body.jueves,
+            viernes: req.body.viernes,
+            sabado: req.body.sabado,
+            domingo: req.body.domingo,
+            horaIni: req.body.horaIni,
+            minIni: req.body.minIni,
+            horaFin: req.body.horaFin,
+            minFin: req.body.minFin,
+            intervalo: req.body.intervalo,
+        }
+        const HorarioConfig = require('../models/horario.config.model');
+        await HorarioConfig.update(data, { where: { id: idHorarioConfig } });
+        response(res, HttpStatus.OK, `Configuracion de Horario modificada`);
+
+    } catch (error) {
+        logger.error(error);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al modificar Configuracion de Horario`);
+    }
+};
+
+const eliminarHorarioConfig = async (req, res) => {
+    logger.info(`${req.method} ${req.originalUrl}, eliminar Configuracion de Horario`);
+
+    await verificarDistrib(req, res);
+
+    //Validamos
+    let validator = new Validator(req.params, {
+        id: 'required|integer',
+        idHorarioConfig: 'required|integer',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
+        return;
+    }
+
+    let idAuthUsu = req.auth.data.idUsuario;
+    let idUsuario = req.params.id;
+    if (idAuthUsu != idUsuario) {
+        response(res, HttpStatus.UNAUTHORIZED, `Solo puede eliminar por el mismo id`);
+        return;
+    }
+
+    const idHorarioConfig = req.params.idHorarioConfig;
+    try {
+        const HorarioConfig = require('../models/horario.config.model');
+        await HorarioConfig.update({ estado: false }, {
+            where: {
+                id: idHorarioConfig
+            }
+        });
+        response(res, HttpStatus.OK, `Configuracion de Horario eliminada`);
+    } catch (error) {
+        logger.error(error);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al eliminar Configuracion de Horario`);
+    }
+}
+
 module.exports = {
     obtenerServicios,
     agregarServicio,
@@ -386,4 +615,8 @@ module.exports = {
     agregarDireccion,
     modificarDireccion,
     eliminarDireccion,
+    obtenerHorariosConfig,
+    agregarHorarioConfig,
+    modificarHorarioConfig,
+    eliminarHorarioConfig,
 };

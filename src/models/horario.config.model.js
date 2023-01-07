@@ -1,6 +1,8 @@
 const { DataTypes, Model } = require('sequelize');
 const db = require('.');
 const {Usuario} = require('./usuario.model');
+const Horario = require('./horario.model');
+const Direccion = require('./direccion.model');
 
 class HorarioConfig extends Model{}
 
@@ -11,17 +13,64 @@ HorarioConfig.init({
         primaryKey: true,
         autoIncrement: true
     },
-    dias: {
-        type: DataTypes.STRING(50)
+    lunes: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
+    martes: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
+    miercoles: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
+    jueves: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
+    viernes: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
+    sabado: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
+    domingo: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
     },
     horaIni: {
-        type: DataTypes.TIME,
+        type: DataTypes.TINYINT,
+        allowNull: false,
+    },
+    minIni: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
     },
     horaFin: {
-        type: DataTypes.TIME,
+        type: DataTypes.TINYINT,
+        allowNull: false,
+    },
+    minFin: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
     },
     intervalo: {
         type: DataTypes.INTEGER,
+        allowNull: false,
+    },
+    turno: {
+        type: DataTypes.STRING(1),
+        allowNull: false,
     },
     estado: {
         type: DataTypes.BOOLEAN,
@@ -32,5 +81,7 @@ HorarioConfig.init({
     sequelize: db.sequelize
 });
 HorarioConfig.belongsTo(Usuario, {as: 'Distrib', foreignKey: 'idDistrib'});
+HorarioConfig.belongsTo(Direccion, {as: 'Local', foreignKey: 'idLocal'});
+HorarioConfig.hasMany(Horario, {as: 'Horario', foreignKey: 'idHorarioConfig'});
 
 module.exports = HorarioConfig;
