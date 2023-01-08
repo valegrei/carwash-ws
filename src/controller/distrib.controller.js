@@ -11,7 +11,6 @@ const verificarDistrib = async (req, res) => {
     const authUsu = await Usuario.findOne({ where: { id: idAuthUsu, idTipoUsuario: 3, estado: 1 } });
     if (!authUsu) {
         //No es usuario Distribuidor
-        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return null;
     }
     return authUsu;
@@ -21,7 +20,11 @@ const obtenerServicios = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, obteniendo servicios`);
 
-    await verificarDistrib(req, res);
+    const usuDis = await verificarDistrib(req, res);
+    if(!usuDis){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     //Validamos
     let validator = new Validator(req.params, {
@@ -73,7 +76,11 @@ const agregarServicio = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, creando servicio`);
 
-    await verificarDistrib(req, res);
+    const usuDis = await verificarDistrib(req, res);
+    if(!usuDis){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
     //Validamos
     let validator = new Validator(req.params, {
         id: 'required|integer',
@@ -124,7 +131,11 @@ const modificarServicio = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, modificando servicios`);
 
-    await verificarDistrib(req, res);
+    const usuDis = await verificarDistrib(req, res);
+    if(!usuDis){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
     //Validamos
     let validator = new Validator(req.params, {
         id: 'required|integer',
@@ -173,7 +184,11 @@ const obtenerDirecciones = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, obteniendo direcciones`);
 
-    await verificarDistrib(req, res);
+    const usuDis = await verificarDistrib(req, res);
+    if(!usuDis){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     //Validamos
     let validator = new Validator(req.params, {
@@ -226,7 +241,11 @@ const agregarDireccion = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, creando direccion`);
 
-    await verificarDistrib(req, res);
+    const usuDis = await verificarDistrib(req, res);
+    if(!usuDis){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
     //Validamos
     let validator = new Validator(req.params, {
         id: 'required|integer',
@@ -287,7 +306,11 @@ const modificarDireccion = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, modificando direccion`);
 
-    await verificarDistrib(req, res);
+    const usuDis = await verificarDistrib(req, res);
+    if(!usuDis){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
     //Validamos
     let validator = new Validator(req.params, {
         id: 'required|integer',
@@ -344,7 +367,11 @@ const modificarDireccion = async (req, res) => {
 const eliminarDireccion = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, Eliminando Direccion`);
 
-    await verificarDistrib(req, res);
+    const usuDis = await verificarDistrib(req, res);
+    if(!usuDis){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     //Validamos
     let validator = new Validator(req.params, {
@@ -366,11 +393,20 @@ const eliminarDireccion = async (req, res) => {
     const idDireccion = req.params.idDireccion;
     try {
         const Direccion = require('../models/direccion.model');
+        const HorarioConfig = require('../models/horario.config.model');
         await Direccion.update({ estado: false }, {
             where: {
                 id: idDireccion
             }
         });
+        // Tambien se anulan horarios relacionados
+        await HorarioConfig.update({estado: false}, {
+            where: {
+                idLocal: idDireccion,
+                estado: true
+            }
+        });
+        //TODO anular tambien los horarios y reservas futuras generadas
         response(res, HttpStatus.OK, `Direccion eliminada`);
     } catch (error) {
         logger.error(error);
@@ -382,7 +418,11 @@ const obtenerHorariosConfig = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, obteniendo Configuraciones de Horario`);
 
-    await verificarDistrib(req, res);
+    const usuDis = await verificarDistrib(req, res);
+    if(!usuDis){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     //Validamos
     let validator = new Validator(req.params, {
@@ -437,7 +477,11 @@ const agregarHorarioConfig = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, creando Configuracion de Horario`);
 
-    await verificarDistrib(req, res);
+    const usuDis = await verificarDistrib(req, res);
+    if(!usuDis){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
     //Validamos
     let validator = new Validator(req.params, {
         id: 'required|integer',
@@ -509,7 +553,11 @@ const modificarHorarioConfig = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, modificando Configuracion de Horario`);
 
-    await verificarDistrib(req, res);
+    const usuDis = await verificarDistrib(req, res);
+    if(!usuDis){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
     //Validamos
     let validator = new Validator(req.params, {
         id: 'required|integer',
@@ -577,7 +625,11 @@ const modificarHorarioConfig = async (req, res) => {
 const eliminarHorarioConfig = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, eliminar Configuracion de Horario`);
 
-    await verificarDistrib(req, res);
+    const usuDis = await verificarDistrib(req, res);
+    if(!usuDis){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     //Validamos
     let validator = new Validator(req.params, {
@@ -604,6 +656,7 @@ const eliminarHorarioConfig = async (req, res) => {
                 id: idHorarioConfig
             }
         });
+        //TODO anular tambien los horarios y reservas futuras generadas
         response(res, HttpStatus.OK, `Configuracion de Horario eliminada`);
     } catch (error) {
         logger.error(error);

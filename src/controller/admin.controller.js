@@ -22,7 +22,6 @@ const verificarAdmin = async (req,res) => {
     const authUsu = await Usuario.findOne({where:{id:idAuthUsu, idTipoUsuario: 1, estado: 1}});
     if(!authUsu){
         //No es usuario administrador
-        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return null;
     }
     return authUsu;
@@ -37,7 +36,11 @@ const verificarAdmin = async (req,res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, obteniendo parametros`);
 
-    await verificarAdmin(req,res);
+    const usuAdmin = await verificarAdmin(req,res);
+    if(!usuAdmin){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     //Validamos
     let validator = new Validator(req.query,{
@@ -78,7 +81,11 @@ const verificarAdmin = async (req,res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, actualizando parametros`);
 
-    await verificarAdmin(req,res);
+    const usuAdmin = await verificarAdmin(req,res);
+    if(!usuAdmin){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     //Validamos
     let validator = new Validator(req.body,{
@@ -115,7 +122,11 @@ const verificarAdmin = async (req,res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, actualizando parametros SMTP`);
 
-    await verificarAdmin(req,res);
+    const usuAdmin = await verificarAdmin(req,res);
+    if(!usuAdmin){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     //Validamos
     let validator = new Validator(req.body,{
@@ -162,7 +173,11 @@ const verificarAdmin = async (req,res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, actualizando parametros correo`);
 
-    await verificarAdmin(req,res);
+    const usuAdmin = await verificarAdmin(req,res);
+    if(!usuAdmin){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     //Validamos
     let validator = new Validator(req.body,{
@@ -203,6 +218,10 @@ const verificarAdmin = async (req,res) => {
     logger.info(`${req.method} ${req.originalUrl}, probando correo`);
 
     const adminUsu = await verificarAdmin(req,res);
+    if(!adminUsu){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     try{
         const {correo} = adminUsu;
@@ -224,7 +243,11 @@ const getUsuarios = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, obteniendo usuarios`);
 
-    await verificarAdmin(req,res);
+    const usuAdmin = await verificarAdmin(req,res);
+    if(!usuAdmin){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     //Validamos
     let validator = new Validator(req.query,{
@@ -269,7 +292,11 @@ const getUsuarios = async (req, res) => {
 const modificarUsuario = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, actualizando usuario`);
     
-    await verificarAdmin(req,res);
+    const usuAdmin = await verificarAdmin(req,res);
+    if(!usuAdmin){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     //Validamos Id
     let validator = new Validator(req.params,{
@@ -336,7 +363,11 @@ const modificarUsuario = async (req, res) => {
  const agregarAdmin = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, nuevo usuario administrador`);
     
-    await verificarAdmin(req,res);
+    const usuAdmin = await verificarAdmin(req,res);
+    if(!usuAdmin){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     //Validamos contenido
     let validator = new Validator(req.body,{
@@ -399,7 +430,11 @@ const obtenerAnuncios = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, obteniendo anuncios`);
 
-    await verificarAdmin(req,res);
+    const usuAdmin = await verificarAdmin(req,res);
+    if(!usuAdmin){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     //Validamos
     let validator = new Validator(req.query,{
@@ -436,7 +471,11 @@ const crearAnuncio = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, Creando anuncio`);
 
-    await verificarAdmin(req,res);
+    const usuAdmin = await verificarAdmin(req,res);
+    if(!usuAdmin){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     if(!req.file){
         response(res,HttpStatus.UNPROCESABLE_ENTITY,`Falta imagen`);
@@ -447,6 +486,7 @@ const crearAnuncio = async (req, res) => {
     let validator = new Validator(req.body,{
         descripcion: 'string',
         url: 'url',
+        mostrar: 'boolean',
     });
     if(validator.fails()){
         eliminarFotoTmp(req.file);
@@ -459,6 +499,7 @@ const crearAnuncio = async (req, res) => {
     const data = {
         descripcion: req.body.descripcion,
         url: req.body.url,
+        mostrar: req.body.mostrar,
         path: pathStr+filename,
     };
     try{
@@ -474,7 +515,11 @@ const crearAnuncio = async (req, res) => {
 const actualizarAnuncio = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, Actualizando anuncio`);
 
-    await verificarAdmin(req,res);
+    const usuAdmin = await verificarAdmin(req,res);
+    if(!usuAdmin){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
 
     //Validamos idAnuncio
     let validator = new Validator(req.params,{
@@ -515,7 +560,11 @@ const actualizarAnuncio = async (req, res) => {
 const eliminarAnuncio = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, Eliminando anuncios`);
 
-    await verificarAdmin(req,res);
+    const usuAdmin = await verificarAdmin(req,res);
+    if(!usuAdmin){
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
     
     //Validamos datos
     validator = new Validator(req.body,{
