@@ -414,7 +414,7 @@ const obtenerHorariosConfig = async (req, res) => {
     let horarioConfigs = await HorarioConfig.findAll({
         attributes: ['id', 'lunes', 'martes', 'miercoles', 'jueves',
             'viernes', 'sabado', 'domingo', 'horaIni', 'minIni','horaFin',
-            'minFin','intervalo', 'estado', 'idDistrib'],
+            'minFin','intervalo', 'estado', 'idDistrib','idLocal'],
         where: {
             [Op.or]: [
                 { createdAt: { [Op.gt]: lastSincro } },
@@ -467,6 +467,7 @@ const agregarHorarioConfig = async (req, res) => {
         'horaFin': 'required|integer',
         'minFin': 'required|integer',
         'intervalo': 'required|integer',
+        'idLocal': 'required|integer',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `datos erroneos`);
@@ -487,6 +488,7 @@ const agregarHorarioConfig = async (req, res) => {
             horaFin: req.body.horaFin,
             minFin: req.body.minFin,
             intervalo: req.body.intervalo,
+            idLocal: req.body.idLocal,
             idDistrib: idUsuario
         }
         const HorarioConfig = require('../models/horario.config.model');
@@ -538,6 +540,7 @@ const modificarHorarioConfig = async (req, res) => {
         'horaFin': 'required|integer',
         'minFin': 'required|integer',
         'intervalo': 'required|integer',
+        'idLocal': 'required|integer',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `datos erroneos`);
@@ -559,6 +562,7 @@ const modificarHorarioConfig = async (req, res) => {
             horaFin: req.body.horaFin,
             minFin: req.body.minFin,
             intervalo: req.body.intervalo,
+            idLocal: req.body.idLocal,
         }
         const HorarioConfig = require('../models/horario.config.model');
         await HorarioConfig.update(data, { where: { id: idHorarioConfig } });

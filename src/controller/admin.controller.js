@@ -489,6 +489,7 @@ const actualizarAnuncio = async (req, res) => {
     validator = new Validator(req.body,{
         descripcion: 'string',
         url: 'url',
+        mostrar: 'boolean',
     });
     if(validator.fails()){
         response(res,HttpStatus.UNPROCESABLE_ENTITY,`Faltan datos`);
@@ -498,7 +499,8 @@ const actualizarAnuncio = async (req, res) => {
     const idAnuncio = req.params.id;
     const data = {
         descripcion: req.body.descripcion,
-        url: req.body.url
+        url: req.body.url,
+        mostrar: req.body.mostrar,
     };
     try{
         const Anuncio = require('../models/anuncio.model');

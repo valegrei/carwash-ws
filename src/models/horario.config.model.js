@@ -68,10 +68,6 @@ HorarioConfig.init({
         type: DataTypes.INTEGER,
         allowNull: false,
     },
-    turno: {
-        type: DataTypes.STRING(1),
-        allowNull: false,
-    },
     estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: 1,
