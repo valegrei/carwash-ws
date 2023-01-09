@@ -535,6 +535,7 @@ const agregarHorarioConfig = async (req, res) => {
             idLocal: req.body.idLocal,
             idDistrib: idUsuario
         }
+
         const HorarioConfig = require('../models/horario.config.model');
         const nuevoHorarioConfig = await HorarioConfig.create(data);
 
@@ -596,7 +597,7 @@ const modificarHorarioConfig = async (req, res) => {
     }
 
     try {
-        const idHorarioConfig = req.params.id;
+        const idHorarioConfig = req.params.idHorarioConfig;
         const data = {
             lunes: req.body.lunes,
             martes: req.body.martes,
