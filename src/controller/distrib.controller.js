@@ -3,6 +3,7 @@ const logger = require('../util/logger');
 const HttpStatus = require('../util/http.status');
 const Validator = require('validatorjs');
 const { Op } = require('sequelize');
+const {generarHorarios,modificarHorarios,eliminarHorarios} = require('../util/scheduler');
 
 const verificarDistrib = async (req, res) => {
     const idAuthUsu = req.auth.data.idUsuario;
@@ -180,239 +181,6 @@ const modificarServicio = async (req, res) => {
 };
 
 
-const obtenerDirecciones = async (req, res) => {
-
-    logger.info(`${req.method} ${req.originalUrl}, obteniendo direcciones`);
-
-    const usuDis = await verificarDistrib(req, res);
-    if(!usuDis){
-        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
-        return;
-    }
-
-    //Validamos
-    let validator = new Validator(req.params, {
-        id: 'required|integer',
-    });
-    if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
-        return;
-    }
-
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede acceder por el mismo id`);
-        return;
-    }
-
-    validator = new Validator(req.query, {
-        lastSincro: 'required|date',
-    });
-    if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
-        return;
-    }
-
-    let lastSincro = req.query.lastSincro;
-    const Direccion = require('../models/direccion.model');
-
-    let direcciones = await Direccion.findAll({
-        attributes: ['id', 'departamento', 'provincia', 'distrito', 'ubigeo',
-            'direccion', 'latitud', 'longitud', 'estado', 'idUsuario'],
-        where: {
-            [Op.or]: [
-                { createdAt: { [Op.gt]: lastSincro } },
-                { updatedAt: { [Op.gt]: lastSincro } }
-            ],
-            idUsuario: idUsuario,
-        }
-    });
-
-    if (!direcciones.length) {
-        //vacio
-        response(res, HttpStatus.NOT_FOUND, `No hay direcciones.`);
-    } else {
-        response(res, HttpStatus.OK, `Direcciones encontrados`, { direcciones: direcciones });
-    }
-};
-
-const agregarDireccion = async (req, res) => {
-
-    logger.info(`${req.method} ${req.originalUrl}, creando direccion`);
-
-    const usuDis = await verificarDistrib(req, res);
-    if(!usuDis){
-        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
-        return;
-    }
-    //Validamos
-    let validator = new Validator(req.params, {
-        id: 'required|integer',
-    });
-    if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
-        return;
-    }
-
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede agregar por el mismo id`);
-        return;
-    }
-
-    validator = new Validator(req.body, {
-        'departamento': 'required|string',
-        'provincia': 'required|string',
-        'distrito': 'required|string',
-        'ubigeo': 'required|string',
-        'direccion': 'required|string',
-        'latitud': 'required|string',
-        'longitud': 'required|string',
-    });
-    if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `datos erroneos`);
-        return;
-    }
-
-    try {
-        const data = {
-            departamento: req.body.departamento,
-            provincia: req.body.provincia,
-            distrito: req.body.distrito,
-            ubigeo: req.body.ubigeo,
-            direccion: req.body.direccion,
-            latitud: req.body.latitud,
-            longitud: req.body.longitud,
-            idUsuario: idUsuario
-        }
-        const Direccion = require('../models/direccion.model');
-        const nuevaDireccion = await Direccion.create(data);
-
-        if (!nuevaDireccion) {
-            response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al crear Direccion`);
-        } else {
-            response(res, HttpStatus.OK, `Direccion creada`);
-        }
-    } catch (error) {
-        logger.error(error);
-        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al crear Direccion`);
-    }
-};
-
-
-const modificarDireccion = async (req, res) => {
-
-    logger.info(`${req.method} ${req.originalUrl}, modificando direccion`);
-
-    const usuDis = await verificarDistrib(req, res);
-    if(!usuDis){
-        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
-        return;
-    }
-    //Validamos
-    let validator = new Validator(req.params, {
-        id: 'required|integer',
-        idDireccion: 'required|integer'
-    });
-    if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
-        return;
-    }
-
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede agregar por el mismo id`);
-        return;
-    }
-
-    validator = new Validator(req.body, {
-        'departamento': 'required|string',
-        'provincia': 'required|string',
-        'distrito': 'required|string',
-        'ubigeo': 'required|string',
-        'direccion': 'required|string',
-        'latitud': 'required|string',
-        'longitud': 'required|string',
-    });
-    if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `datos erroneos`);
-        return;
-    }
-
-    try {
-        const idDireccion = req.params.id;
-        const data = {
-            departamento: req.body.departamento,
-            provincia: req.body.provincia,
-            distrito: req.body.distrito,
-            ubigeo: req.body.ubigeo,
-            direccion: req.body.direccion,
-            latitud: req.body.latitud,
-            longitud: req.body.longitud,
-        }
-        const Direccion = require('../models/direccion.model');
-        await Direccion.update(data, { where: { id: idDireccion } });
-        response(res, HttpStatus.OK, `Direccion modificada`);
-
-    } catch (error) {
-        logger.error(error);
-        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al modificar Direccion`);
-    }
-};
-
-
-const eliminarDireccion = async (req, res) => {
-    logger.info(`${req.method} ${req.originalUrl}, Eliminando Direccion`);
-
-    const usuDis = await verificarDistrib(req, res);
-    if(!usuDis){
-        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
-        return;
-    }
-
-    //Validamos
-    let validator = new Validator(req.params, {
-        id: 'required|integer',
-        idDireccion: 'required|integer',
-    });
-    if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
-        return;
-    }
-
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede eliminar por el mismo id`);
-        return;
-    }
-
-    const idDireccion = req.params.idDireccion;
-    try {
-        const Direccion = require('../models/direccion.model');
-        const HorarioConfig = require('../models/horario.config.model');
-        await Direccion.update({ estado: false }, {
-            where: {
-                id: idDireccion
-            }
-        });
-        // Tambien se anulan horarios relacionados
-        await HorarioConfig.update({estado: false}, {
-            where: {
-                idLocal: idDireccion,
-                estado: true
-            }
-        });
-        //TODO anular tambien los horarios y reservas futuras generadas
-        response(res, HttpStatus.OK, `Direccion eliminada`);
-    } catch (error) {
-        logger.error(error);
-        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al eliminar Direccion`);
-    }
-}
 
 const obtenerHorariosConfig = async (req, res) => {
 
@@ -542,6 +310,7 @@ const agregarHorarioConfig = async (req, res) => {
         if (!nuevoHorarioConfig) {
             response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al crear Configuracion de Horario`);
         } else {
+            generarHorarios(nuevoHorarioConfig);
             response(res, HttpStatus.OK, `Configuracion de Horario creado`);
         }
     } catch (error) {
@@ -615,6 +384,7 @@ const modificarHorarioConfig = async (req, res) => {
         }
         const HorarioConfig = require('../models/horario.config.model');
         await HorarioConfig.update(data, { where: { id: idHorarioConfig } });
+        modificarHorarios(idHorarioConfig);
         response(res, HttpStatus.OK, `Configuracion de Horario modificada`);
 
     } catch (error) {
@@ -657,6 +427,7 @@ const eliminarHorarioConfig = async (req, res) => {
                 id: idHorarioConfig
             }
         });
+        eliminarHorarios(idHorarioConfig);
         //TODO anular tambien los horarios y reservas futuras generadas
         response(res, HttpStatus.OK, `Configuracion de Horario eliminada`);
     } catch (error) {
@@ -669,10 +440,6 @@ module.exports = {
     obtenerServicios,
     agregarServicio,
     modificarServicio,
-    obtenerDirecciones,
-    agregarDireccion,
-    modificarDireccion,
-    eliminarDireccion,
     obtenerHorariosConfig,
     agregarHorarioConfig,
     modificarHorarioConfig,

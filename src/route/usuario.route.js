@@ -1,5 +1,13 @@
 const express = require('express');
-const {getUsuario, updateUsuario, cambiarPassword} = require('../controller/usuario.controller');
+const {
+  getUsuario,
+  updateUsuario,
+  cambiarPassword,
+  obtenerDirecciones,
+  agregarDireccion,
+  modificarDireccion,
+  eliminarDireccion,
+} = require('../controller/usuario.controller');
 /*const multer  = require('multer');
 const path = require('path');
 const uuid4 = require('uuid4');
@@ -17,10 +25,18 @@ const upload = multer({storage: storage});*/
 const usuarioRoutes = express.Router();
 
 usuarioRoutes.route('/:id')
-    .get(getUsuario)
-    .put(updateUsuario); //.post(upload.single('foto'),updateUsuario);
+  .get(getUsuario)
+  .put(updateUsuario); //.post(upload.single('foto'),updateUsuario);
 
 usuarioRoutes.route('/:id/pass')
   .put(cambiarPassword);
+
+usuarioRoutes.route('/:id/direccion')
+  .get(obtenerDirecciones)
+  .post(agregarDireccion);
+
+usuarioRoutes.route('/:id/direccion/:idDireccion')
+  .put(modificarDireccion)
+  .delete(eliminarDireccion);
 
 module.exports = usuarioRoutes;

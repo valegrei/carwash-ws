@@ -13,7 +13,7 @@ Horario.init({
         autoIncrement: true
     },
     fecha: {
-        type: DataTypes.DATE,
+        type: DataTypes.DATEONLY,
         allowNull: false,
     },
     horaIni: {
@@ -30,7 +30,13 @@ Horario.init({
         allowNulls: false
     },
 }, {
-    sequelize: db.sequelize
+    sequelize: db.sequelize,
+    indexes: [
+        {
+            unique: true,
+            fields: ['fecha', 'horaIni', 'horaFin', 'idHorarioConfig']
+        }
+    ]
 });
 Horario.belongsTo(Usuario, {as: 'Distrib', foreignKey: 'idDistrib'});
 Horario.belongsTo(Direccion, {as: 'Local', foreignKey: 'idLocal'});

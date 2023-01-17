@@ -3,10 +3,6 @@ const {
     agregarServicio,
     obtenerServicios,
     modificarServicio,
-    obtenerDirecciones,
-    agregarDireccion,
-    modificarDireccion,
-    eliminarDireccion,
     obtenerHorariosConfig,
     agregarHorarioConfig,
     modificarHorarioConfig,
@@ -19,15 +15,6 @@ distribRoutes.route('/:id/servicio')
     .get(obtenerServicios)
     .post(agregarServicio)
     .put(modificarServicio);
-
-distribRoutes.route('/:id/direccion')
-    .get(obtenerDirecciones)
-    .post(agregarDireccion);
-
-distribRoutes.route('/:id/direccion/:idDireccion')
-    .put(modificarDireccion)
-    .delete(eliminarDireccion);
-
 
 distribRoutes.route('/:id/horarioConfig')
     .get(obtenerHorariosConfig)
