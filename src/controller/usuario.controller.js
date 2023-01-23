@@ -243,7 +243,7 @@ const modificarDireccion = async (req, res) => {
     }
 
     try {
-        const idDireccion = req.params.id;
+        const idDireccion = req.params.idDireccion;
         const data = {
             departamento: req.body.departamento,
             provincia: req.body.provincia,
