@@ -8,6 +8,7 @@ const authRoutes = require('./route/auth.routes');
 const usuarioRoutes = require('./route/usuario.route');
 const distribRoutes = require('./route/distrib.route');
 const adminRoutes = require('./route/admin.route');
+const clienteRoutes = require('./route/cliente.route');
 const logger = require('./util/logger');
 const db = require('./models');
 const initData = require('./models/init.data');
@@ -22,6 +23,9 @@ fs.ensureDir('uploads/images/profile/',(err) =>{
     if(err) logger.error(err);
 });
 fs.ensureDir('uploads/images/anuncios/',(err) =>{
+    if(err) logger.error(err);
+});
+fs.ensureDir('uploads/images/vehiculos/',(err) =>{
     if(err) logger.error(err);
 });
 
@@ -44,6 +48,7 @@ app.use('/auth', authRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/distrib', distribRoutes);
+app.use('/api/clientes', clienteRoutes);
 app.use('/files',express.static('uploads'));
 app.get('/', (req, res) => response(res, HttpStatus.OK, 'Carwash API, v1.0.0 - All Systems Go'));
 app.use('*', (req, res) => response(res, HttpStatus.NOT_FOUND, 'La ruta no existe'));

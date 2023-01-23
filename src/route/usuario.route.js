@@ -24,18 +24,18 @@ const storage = multer.diskStorage({
 const upload = multer({storage: storage});*/
 const usuarioRoutes = express.Router();
 
-usuarioRoutes.route('/:id')
-  .get(getUsuario)
+usuarioRoutes.route('/account')
+  //.get(getUsuario)
   .put(updateUsuario); //.post(upload.single('foto'),updateUsuario);
 
-usuarioRoutes.route('/:id/pass')
+usuarioRoutes.route('/pass')
   .put(cambiarPassword);
 
-usuarioRoutes.route('/:id/direccion')
+usuarioRoutes.route('/direccion')
   .get(obtenerDirecciones)
   .post(agregarDireccion);
 
-usuarioRoutes.route('/:id/direccion/:idDireccion')
+usuarioRoutes.route('/direccion/:idDireccion')
   .put(modificarDireccion)
   .delete(eliminarDireccion);
 

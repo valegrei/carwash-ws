@@ -20,9 +20,11 @@ Vehiculo.init({
     year: {
         type: DataTypes.SMALLINT
     },
+    placa: {
+        type: DataTypes.STRING(10)
+    },
     path: {
         type: DataTypes.STRING(100),
-        allowNull: false
     },
     estado: {
         type: DataTypes.BOOLEAN,

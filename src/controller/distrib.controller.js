@@ -6,10 +6,10 @@ const { Op } = require('sequelize');
 const {generarHorarios,modificarHorarios,eliminarHorarios} = require('../util/scheduler');
 
 const verificarDistrib = async (req, res) => {
-    const idAuthUsu = req.auth.data.idUsuario;
+    const idUsuario = req.auth.data.idUsuario;
     const { Usuario } = require('../models/usuario.model');
     //verificamos si el usuario solicitante tiene el Rol de Distribuidor
-    const authUsu = await Usuario.findOne({ where: { id: idAuthUsu, idTipoUsuario: 3, estado: 1 } });
+    const authUsu = await Usuario.findOne({ where: { id: idUsuario, idTipoUsuario: 3, estado: 1 } });
     if (!authUsu) {
         //No es usuario Distribuidor
         return null;
@@ -27,21 +27,7 @@ const obtenerServicios = async (req, res) => {
         return;
     }
 
-    //Validamos
-    let validator = new Validator(req.params, {
-        id: 'required|integer',
-    });
-    if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
-        return;
-    }
-
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede acceder por el mismo id`);
-        return;
-    }
+    let idUsuario = req.auth.data.idUsuario;
 
     validator = new Validator(req.query, {
         lastSincro: 'required|date',
@@ -82,21 +68,8 @@ const agregarServicio = async (req, res) => {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
-    //Validamos
-    let validator = new Validator(req.params, {
-        id: 'required|integer',
-    });
-    if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
-        return;
-    }
 
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede agregar por el mismo id`);
-        return;
-    }
+    let idUsuario = req.auth.data.idUsuario;
 
     validator = new Validator(req.body, {
         'nombre': 'required|string',
@@ -137,21 +110,8 @@ const modificarServicio = async (req, res) => {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
-    //Validamos
-    let validator = new Validator(req.params, {
-        id: 'required|integer',
-    });
-    if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
-        return;
-    }
 
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede agregar por el mismo id`);
-        return;
-    }
+    let idUsuario = req.auth.data.idUsuario;
 
     validator = new Validator(req.body, {
         'id': 'required|integer',
@@ -192,21 +152,7 @@ const obtenerHorariosConfig = async (req, res) => {
         return;
     }
 
-    //Validamos
-    let validator = new Validator(req.params, {
-        id: 'required|integer',
-    });
-    if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
-        return;
-    }
-
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede acceder por el mismo id`);
-        return;
-    }
+    let idUsuario = req.auth.data.idUsuario;
 
     validator = new Validator(req.query, {
         lastSincro: 'required|date',
@@ -250,21 +196,8 @@ const agregarHorarioConfig = async (req, res) => {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
-    //Validamos
-    let validator = new Validator(req.params, {
-        id: 'required|integer',
-    });
-    if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
-        return;
-    }
 
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede agregar por el mismo id`);
-        return;
-    }
+    let idUsuario = req.auth.data.idUsuario;
 
     validator = new Validator(req.body, {
         'lunes': 'required|boolean',
@@ -330,7 +263,6 @@ const modificarHorarioConfig = async (req, res) => {
     }
     //Validamos
     let validator = new Validator(req.params, {
-        id: 'required|integer',
         idHorarioConfig: 'required|integer'
     });
     if (validator.fails()) {
@@ -338,12 +270,7 @@ const modificarHorarioConfig = async (req, res) => {
         return;
     }
 
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede agregar por el mismo id`);
-        return;
-    }
+    let idUsuario = req.auth.data.idUsuario;
 
     validator = new Validator(req.body, {
         'lunes': 'required|boolean',
@@ -383,7 +310,7 @@ const modificarHorarioConfig = async (req, res) => {
             idLocal: req.body.idLocal,
         }
         const HorarioConfig = require('../models/horario.config.model');
-        await HorarioConfig.update(data, { where: { id: idHorarioConfig } });
+        await HorarioConfig.update(data, { where: { id: idHorarioConfig, idDistrib: idUsuario } });
         modificarHorarios(idHorarioConfig);
         response(res, HttpStatus.OK, `Configuracion de Horario modificada`);
 
@@ -404,7 +331,6 @@ const eliminarHorarioConfig = async (req, res) => {
 
     //Validamos
     let validator = new Validator(req.params, {
-        id: 'required|integer',
         idHorarioConfig: 'required|integer',
     });
     if (validator.fails()) {
@@ -412,19 +338,14 @@ const eliminarHorarioConfig = async (req, res) => {
         return;
     }
 
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede eliminar por el mismo id`);
-        return;
-    }
+    let idUsuario = req.auth.data.idUsuario;
 
     const idHorarioConfig = req.params.idHorarioConfig;
     try {
         const HorarioConfig = require('../models/horario.config.model');
         await HorarioConfig.update({ estado: false }, {
             where: {
-                id: idHorarioConfig
+                id: idHorarioConfig, idDistrib: idUsuario
             }
         });
         eliminarHorarios(idHorarioConfig);

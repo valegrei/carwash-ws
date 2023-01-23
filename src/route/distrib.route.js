@@ -11,16 +11,16 @@ const {
 
 const distribRoutes = express.Router();
 
-distribRoutes.route('/:id/servicio')
+distribRoutes.route('/servicio')
     .get(obtenerServicios)
     .post(agregarServicio)
     .put(modificarServicio);
 
-distribRoutes.route('/:id/horarioConfig')
+distribRoutes.route('/horarioConfig')
     .get(obtenerHorariosConfig)
     .post(agregarHorarioConfig);
 
-distribRoutes.route('/:id/horarioConfig/:idHorarioConfig')
+distribRoutes.route('/horarioConfig/:idHorarioConfig')
     .put(modificarHorarioConfig)
     .delete(eliminarHorarioConfig);
 

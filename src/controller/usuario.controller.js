@@ -4,30 +4,14 @@ const HttpStatus = require('../util/http.status');
 const Validator = require('validatorjs');
 const {generarCodigo, sha256} = require('../util/utils');
 const { Op } = require('sequelize');
-/*const fs = require('fs-extra');
-const uploadFolder = 'uploads/images/profile/';
-const pathStr = '/files/images/profile/';*/
 
 /**
  * Obtiene datos del mismo usuario que lo solicita
  */
 const getUsuario = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, obteniendo usuario`);
-    //Validamos
-    let validator = new Validator(req.params,{
-        id: 'required|integer',
-    });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`id faltante`);
-        return;
-    }
-
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if(idAuthUsu!= idUsuario){
-        response(res,HttpStatus.UNAUTHORIZED,`Solo puede consultar por el mismo id`);
-        return;
-    }
+    
+    let idUsuario = req.auth.data.idUsuario;
 
     const {Usuario} = require('../models/usuario.model');
 
@@ -53,20 +37,7 @@ const getUsuario = async (req, res) => {
 const updateUsuario = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, actualizando usuario`);
     
-    //Validamos Id
-    let validator = new Validator(req.params,{
-        id: 'required|integer',
-    });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`id faltante`);
-        return;
-    }
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if(idAuthUsu!= idUsuario){
-        response(res,HttpStatus.UNAUTHORIZED,`Solo puede modificar por el mismo id`);
-        return;
-    }
+    let idUsuario = req.auth.data.idUsuario;
 
     //Validamos datos ingresados
     validator = new Validator(req.body, {
@@ -120,20 +91,7 @@ const updateUsuario = async (req, res) => {
 const cambiarPassword = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, cambiando clave de usuario`);
     
-    //Validamos Id
-    let validator = new Validator(req.params,{
-        id: 'required|integer',
-    });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`id faltante`);
-        return;
-    }
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if(idAuthUsu!= idUsuario){
-        response(res,HttpStatus.UNAUTHORIZED,`Solo puede modificar por el mismo id`);
-        return;
-    }
+    let idUsuario = req.auth.data.idUsuario;
 
     //Validamos datos ingresados
     validator = new Validator(req.body, {
@@ -176,21 +134,7 @@ const obtenerDirecciones = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, obteniendo direcciones`);
 
-    //Validamos
-    let validator = new Validator(req.params, {
-        id: 'required|integer',
-    });
-    if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
-        return;
-    }
-
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede acceder por el mismo id`);
-        return;
-    }
+    let idUsuario = req.auth.data.idUsuario;
 
     validator = new Validator(req.query, {
         lastSincro: 'required|date',
@@ -227,21 +171,7 @@ const agregarDireccion = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, creando direccion`);
 
-    //Validamos
-    let validator = new Validator(req.params, {
-        id: 'required|integer',
-    });
-    if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
-        return;
-    }
-
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede agregar por el mismo id`);
-        return;
-    }
+    let idUsuario = req.auth.data.idUsuario;
 
     validator = new Validator(req.body, {
         'departamento': 'required|string',
@@ -289,7 +219,6 @@ const modificarDireccion = async (req, res) => {
 
     //Validamos
     let validator = new Validator(req.params, {
-        id: 'required|integer',
         idDireccion: 'required|integer'
     });
     if (validator.fails()) {
@@ -297,12 +226,7 @@ const modificarDireccion = async (req, res) => {
         return;
     }
 
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede agregar por el mismo id`);
-        return;
-    }
+    let idUsuario = req.auth.data.idUsuario;
 
     validator = new Validator(req.body, {
         'departamento': 'required|string',
@@ -330,7 +254,7 @@ const modificarDireccion = async (req, res) => {
             longitud: req.body.longitud,
         }
         const Direccion = require('../models/direccion.model');
-        await Direccion.update(data, { where: { id: idDireccion } });
+        await Direccion.update(data, { where: { id: idDireccion, idUsuario: idUsuario } });
         response(res, HttpStatus.OK, `Direccion modificada`);
 
     } catch (error) {
@@ -345,7 +269,6 @@ const eliminarDireccion = async (req, res) => {
 
     //Validamos
     let validator = new Validator(req.params, {
-        id: 'required|integer',
         idDireccion: 'required|integer',
     });
     if (validator.fails()) {
@@ -353,12 +276,7 @@ const eliminarDireccion = async (req, res) => {
         return;
     }
 
-    let idAuthUsu = req.auth.data.idUsuario;
-    let idUsuario = req.params.id;
-    if (idAuthUsu != idUsuario) {
-        response(res, HttpStatus.UNAUTHORIZED, `Solo puede eliminar por el mismo id`);
-        return;
-    }
+    let idUsuario = req.auth.data.idUsuario;
 
     const idDireccion = req.params.idDireccion;
     try {
@@ -366,7 +284,7 @@ const eliminarDireccion = async (req, res) => {
         const HorarioConfig = require('../models/horario.config.model');
         await Direccion.update({ estado: false }, {
             where: {
-                id: idDireccion
+                id: idDireccion, idUsuario: idUsuario
             }
         });
         // Tambien se anulan horarios relacionados
@@ -383,38 +301,6 @@ const eliminarDireccion = async (req, res) => {
         response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al eliminar Direccion`);
     }
 }
-/*
-const eliminarFotoTmp = async (file) => {
-    if(!file) return;
-    try{
-        await fs.remove(destination + filename);
-    }catch(error){
-        logger.error(error);
-    }
-}
-
-const guardarFoto = async (idUsuario, file) => {
-    if(!file) return;
-
-    let {filename, destination} = file;
-    
-    try{
-        //inserta archivo
-        const Archivo = require('../models/archivo.model');
-        let archivo = await Archivo.create({path: pathStr + filename})
-        
-        //actualiza usuario
-        let {id} = archivo;
-        const Usuario = require('../models/usuario.model');
-        logger.info(`archivo: ${id}, usuario: ${idUsuario}`);
-        await Usuario.update({idArchivoFoto: id}, {where: {id: idUsuario}});
-
-        //mueve el archivo
-        await fs.move(destination + filename, uploadFolder + filename);
-    }catch(error){
-        logger.error(error);
-    }
-};*/
 
 module.exports = {
     getUsuario, 
