@@ -1,26 +1,26 @@
-const {response} = require('../domain/response');
+const { response } = require('../domain/response');
 const logger = require('../util/logger');
 const HttpStatus = require('../util/http.status');
 const Validator = require('validatorjs');
-const {Op} = require('sequelize');
+const { Op } = require('sequelize');
 const fs = require('fs-extra');
 const uploadFolder = 'uploads/images/anuncios/';
 const pathStr = '/files/images/anuncios/';
 const {
-    enviarCorreo, 
-    contentNotifDistribActivado, 
+    enviarCorreo,
+    contentNotifDistribActivado,
     contentNotifAdminRegistrado,
     verifyConfig,
     contentTest,
 } = require('../util/mail');
-const {generarCodigo, sha256} = require('../util/utils');
+const { generarCodigo, sha256 } = require('../util/utils');
 
-const verificarAdmin = async (req,res) => {
+const verificarAdmin = async (req, res) => {
     const idAuthUsu = req.auth.data.idUsuario;
-    const {Usuario} = require('../models/usuario.model');
+    const { Usuario } = require('../models/usuario.model');
     //verificamos si el usuario solicitante tiene el Rol de Administrador
-    const authUsu = await Usuario.findOne({where:{id:idAuthUsu, idTipoUsuario: 1, estado: 1}});
-    if(!authUsu){
+    const authUsu = await Usuario.findOne({ where: { id: idAuthUsu, idTipoUsuario: 1, estado: 1 } });
+    if (!authUsu) {
         //No es usuario administrador
         return null;
     }
@@ -32,43 +32,43 @@ const verificarAdmin = async (req,res) => {
  * Obtiene lista de parametros segun fecha de ultima sincronizacion
  * Solo el usuario con Rol de Administrador tiene el permiso
  */
- const getParametros = async (req, res) => {
+const getParametros = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, obteniendo parametros`);
 
-    const usuAdmin = await verificarAdmin(req,res);
-    if(!usuAdmin){
+    const usuAdmin = await verificarAdmin(req, res);
+    if (!usuAdmin) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
 
     //Validamos
-    let validator = new Validator(req.query,{
+    let validator = new Validator(req.query, {
         lastSincro: 'required|date',
     });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`lastSincro faltante`);
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
         return;
     }
 
     let lastSincro = req.query.lastSincro;
-    const {Parametro} = require('../models/parametro.model');
+    const { Parametro } = require('../models/parametro.model');
 
     let parametros = await Parametro.findAll({
         attributes: ['clave', 'valor', 'idTipo'],
-        where:{
-            [Op.or]:[
-                {createdAt: { [Op.gt]: lastSincro }},
-                {updatedAt: { [Op.gt]: lastSincro }}
+        where: {
+            [Op.or]: [
+                { createdAt: { [Op.gt]: lastSincro } },
+                { updatedAt: { [Op.gt]: lastSincro } }
             ]
         }
     });
-    
-    if(!parametros.length){
+
+    if (!parametros.length) {
         //vacio
-        response(res,HttpStatus.NOT_FOUND,`No hay parametros.`);
-    }else{
-        response(res,HttpStatus.OK,`Parametros encontrados`,{parametros: parametros});
+        response(res, HttpStatus.NOT_FOUND, `No hay parametros.`);
+    } else {
+        response(res, HttpStatus.OK, `Parametros encontrados`, { parametros: parametros });
     }
 };
 
@@ -77,40 +77,40 @@ const verificarAdmin = async (req,res) => {
  * Obtiene lista de parametros segun fecha de ultima sincronizacion
  * Solo el usuario con Rol de Administrador tiene el permiso
  */
- const actualizarParametros = async (req, res) => {
+const actualizarParametros = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, actualizando parametros`);
 
-    const usuAdmin = await verificarAdmin(req,res);
-    if(!usuAdmin){
+    const usuAdmin = await verificarAdmin(req, res);
+    if (!usuAdmin) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
 
     //Validamos
-    let validator = new Validator(req.body,{
+    let validator = new Validator(req.body, {
         'params.*.clave': 'required|string',
         'params.*.valor': 'required|string',
         'params.*.idTipo': 'required|integer',
     });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`datos erroneos`);
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `datos erroneos`);
         return;
     }
 
-    try{
-        const {Parametro} = require('../models/parametro.model');
+    try {
+        const { Parametro } = require('../models/parametro.model');
         let params = req.body.params;
         params = params.map(e => e.updatedAt = Date.now());
-    
-        await Parametro.bulkCreate(params,{
+
+        await Parametro.bulkCreate(params, {
             updateOnDuplicate: ['valor', 'updatedAt']
         });
-        
-        response(res,HttpStatus.OK,`Parametros actualizados`);
-    }catch(error){
+
+        response(res, HttpStatus.OK, `Parametros actualizados`);
+    } catch (error) {
         logger.error(error);
-        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al actualizar parametros`);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al actualizar parametros`);
     }
 };
 
@@ -118,49 +118,49 @@ const verificarAdmin = async (req,res) => {
  * Obtiene lista de parametros segun fecha de ultima sincronizacion
  * Solo el usuario con Rol de Administrador tiene el permiso
  */
- const actualizarParametrosSMTP = async (req, res) => {
+const actualizarParametrosSMTP = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, actualizando parametros SMTP`);
 
-    const usuAdmin = await verificarAdmin(req,res);
-    if(!usuAdmin){
+    const usuAdmin = await verificarAdmin(req, res);
+    if (!usuAdmin) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
 
     //Validamos
-    let validator = new Validator(req.body,{
+    let validator = new Validator(req.body, {
         'host': 'required|string',
         'port': 'required|string',
         'secure': 'required|integer',
     });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`datos faltantes`);
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `datos faltantes`);
         return;
     }
 
-    try{
-        const {host, port, secure} = req.body;
+    try {
+        const { host, port, secure } = req.body;
 
-        if(await verifyConfig(host, parseInt(port), parseInt(secure)!=0)){
-            const {Parametro} = require('../models/parametro.model');
+        if (await verifyConfig(host, parseInt(port), parseInt(secure) != 0)) {
+            const { Parametro } = require('../models/parametro.model');
             const updatedAt = Date.now();
 
             await Parametro.bulkCreate([
-                {clave: 'EMAIL_HOST', valor: host, idTipo: 1, updatedAt: updatedAt},
-                {clave: 'EMAIL_PORT', valor: port, idTipo: 1, updatedAt: updatedAt},
-                {clave: 'EMAIL_SSL_TLS', valor: secure, idTipo: 1, updatedAt: updatedAt},
-            ],{
-                updateOnDuplicate: ['valor','updatedAt']
+                { clave: 'EMAIL_HOST', valor: host, idTipo: 1, updatedAt: updatedAt },
+                { clave: 'EMAIL_PORT', valor: port, idTipo: 1, updatedAt: updatedAt },
+                { clave: 'EMAIL_SSL_TLS', valor: secure, idTipo: 1, updatedAt: updatedAt },
+            ], {
+                updateOnDuplicate: ['valor', 'updatedAt']
             });
-            
-            response(res,HttpStatus.OK,`Parametros SMTP actualizados`);
-        }else{
-            response(res,HttpStatus.UNPROCESABLE_ENTITY,`Parametros de SMTP no validos`);
+
+            response(res, HttpStatus.OK, `Parametros SMTP actualizados`);
+        } else {
+            response(res, HttpStatus.UNPROCESABLE_ENTITY, `Parametros de SMTP no validos`);
         }
-    }catch(error){
+    } catch (error) {
         logger.error(error);
-        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al actualizar parametros SMTP`);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al actualizar parametros SMTP`);
     }
 };
 
@@ -169,42 +169,42 @@ const verificarAdmin = async (req,res) => {
  * Obtiene lista de parametros segun fecha de ultima sincronizacion
  * Solo el usuario con Rol de Administrador tiene el permiso
  */
- const actualizarParametrosCorreo = async (req, res) => {
+const actualizarParametrosCorreo = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, actualizando parametros correo`);
 
-    const usuAdmin = await verificarAdmin(req,res);
-    if(!usuAdmin){
+    const usuAdmin = await verificarAdmin(req, res);
+    if (!usuAdmin) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
 
     //Validamos
-    let validator = new Validator(req.body,{
+    let validator = new Validator(req.body, {
         'address': 'required|string',
         'pass': 'required|string',
     });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`datos faltantes`);
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `datos faltantes`);
         return;
     }
 
-    try{
-        const {address, pass} = req.body;
-        const {Parametro} = require('../models/parametro.model');
+    try {
+        const { address, pass } = req.body;
+        const { Parametro } = require('../models/parametro.model');
         const updatedAt = Date.now();
 
         await Parametro.bulkCreate([
-            {clave: 'EMAIL_ADDR', valor: address, idTipo: 1, updatedAt: updatedAt},
-            {clave: 'EMAIL_PASS', valor: pass, idTipo: 1, updatedAt: updatedAt},
-        ],{
-            updateOnDuplicate: ['valor','updatedAt']
+            { clave: 'EMAIL_ADDR', valor: address, idTipo: 1, updatedAt: updatedAt },
+            { clave: 'EMAIL_PASS', valor: pass, idTipo: 1, updatedAt: updatedAt },
+        ], {
+            updateOnDuplicate: ['valor', 'updatedAt']
         });
 
-        response(res,HttpStatus.OK,`Parametros Correo actualizados`);
-    }catch(error){
+        response(res, HttpStatus.OK, `Parametros Correo actualizados`);
+    } catch (error) {
         logger.error(error);
-        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al actualizar parametros correo`);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al actualizar parametros correo`);
     }
 };
 
@@ -213,25 +213,25 @@ const verificarAdmin = async (req,res) => {
  * Se prueba el correo
  * Solo el usuario con Rol de Administrador tiene el permiso
  */
- const probarCorreo = async (req, res) => {
+const probarCorreo = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, probando correo`);
 
-    const adminUsu = await verificarAdmin(req,res);
-    if(!adminUsu){
+    const adminUsu = await verificarAdmin(req, res);
+    if (!adminUsu) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
 
-    try{
-        const {correo} = adminUsu;
+    try {
+        const { correo } = adminUsu;
         const content = contentTest();
-        enviarCorreo(correo,content.subject, content.body)
+        enviarCorreo(correo, content.subject, content.body)
 
-        response(res,HttpStatus.OK,`Se envio correo de prueba`);
-    }catch(error){
+        response(res, HttpStatus.OK, `Se envio correo de prueba`);
+    } catch (error) {
         logger.error(error);
-        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al probar correo`);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al probar correo`);
     }
 };
 
@@ -243,44 +243,44 @@ const getUsuarios = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, obteniendo usuarios`);
 
-    const usuAdmin = await verificarAdmin(req,res);
-    if(!usuAdmin){
+    const usuAdmin = await verificarAdmin(req, res);
+    if (!usuAdmin) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
 
     //Validamos
-    let validator = new Validator(req.query,{
+    let validator = new Validator(req.query, {
         lastSincro: 'required|date',
     });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`lastSincro faltante`);
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
         return;
     }
 
     let lastSincro = req.query.lastSincro;
-    const {Usuario} = require('../models/usuario.model');
+    const { Usuario } = require('../models/usuario.model');
 
     let usuarios = await Usuario.findAll({
         attributes: [
-            'id', 'correo', 'nombres', 'apellidoPaterno', 'apellidoMaterno', 
-            'razonSocial', 'nroDocumento', 'nroCel1','nroCel2', 'estado', 'idTipoUsuario', 
+            'id', 'correo', 'nombres', 'apellidoPaterno', 'apellidoMaterno',
+            'razonSocial', 'nroDocumento', 'nroCel1', 'nroCel2', 'estado', 'idTipoUsuario',
             'idTipoDocumento', 'createdAt', 'updatedAt'
         ],
-        where:{
-            [Op.or]:[
-                {createdAt: { [Op.gt]: lastSincro }},
-                {updatedAt: { [Op.gt]: lastSincro }}
+        where: {
+            [Op.or]: [
+                { createdAt: { [Op.gt]: lastSincro } },
+                { updatedAt: { [Op.gt]: lastSincro } }
             ]
         }
     });
-    
-    if(!usuarios.length){
+
+    if (!usuarios.length) {
         //vacio
-        response(res,HttpStatus.NOT_FOUND,`No hay usuarios.`);
+        response(res, HttpStatus.NOT_FOUND, `No hay usuarios.`);
         return;
-    }else{
-        response(res,HttpStatus.OK,`Usuarios encontrados`,{usuarios: usuarios});
+    } else {
+        response(res, HttpStatus.OK, `Usuarios encontrados`, { usuarios: usuarios });
         return;
     }
 };
@@ -291,66 +291,66 @@ const getUsuarios = async (req, res) => {
  */
 const modificarUsuario = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, actualizando usuario`);
-    
-    const usuAdmin = await verificarAdmin(req,res);
-    if(!usuAdmin){
+
+    const usuAdmin = await verificarAdmin(req, res);
+    if (!usuAdmin) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
 
     //Validamos Id
-    let validator = new Validator(req.params,{
+    let validator = new Validator(req.params, {
         id: 'required|integer',
     });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`id faltante`);
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
         return;
     }
 
     //validamos contenido
-    validator = new Validator(req.body,{
+    validator = new Validator(req.body, {
         idTipoUsuario: 'integer',
         idTipoDocumento: 'integer',
         nroDocumento: 'integer',
         estado: 'integer',
     });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`datos erroneos`);
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `datos erroneos`);
         return;
     }
 
     let idUsuario = req.params.id;
 
-    try{
-        const {Usuario} = require('../models/usuario.model');
+    try {
+        const { Usuario } = require('../models/usuario.model');
 
         const usuario = await Usuario.findByPk(idUsuario);
 
         const oldEstado = usuario.estado
-        
-        if(req.body.idTipoUsuario != null){
+
+        if (req.body.idTipoUsuario != null) {
             usuario.idTipoUsuario = req.body.idTipoUsuario;
         }
-        if(req.body.idTipoDocumento != null){
+        if (req.body.idTipoDocumento != null) {
             usuario.idTipoDocumento = req.body.idTipoDocumento;
         }
-        if(req.body.nroDocumento != null){
+        if (req.body.nroDocumento != null) {
             usuario.nroDocumento = req.body.nroDocumento;
         }
-        if(req.body.estado != null){
+        if (req.body.estado != null) {
             usuario.estado = req.body.estado;
         }
 
         await usuario.save();
 
-        if(oldEstado==2 && usuario.estado==1){
+        if (oldEstado == 2 && usuario.estado == 1) {
             //Si se activa distribuidor
             const content = contentNotifDistribActivado(usuario.razonSocial, usuario.nroDocumento);
             enviarCorreo(usuario.correo, content.subject, content.body);
         }
 
         response(res, HttpStatus.OK, `Usuario modificado`);
-    }catch(error){
+    } catch (error) {
         response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al modificar usuario`);
     }
 };
@@ -360,37 +360,37 @@ const modificarUsuario = async (req, res) => {
  * Agrega un nuevo usuario Administrador
  * Solo el usuario de Rol Administrador esta autorizado para hacerlo 
  */
- const agregarAdmin = async (req, res) => {
+const agregarAdmin = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, nuevo usuario administrador`);
-    
-    const usuAdmin = await verificarAdmin(req,res);
-    if(!usuAdmin){
+
+    const usuAdmin = await verificarAdmin(req, res);
+    if (!usuAdmin) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
 
     //Validamos contenido
-    let validator = new Validator(req.body,{
+    let validator = new Validator(req.body, {
         correo: 'required|email',
         nombres: 'string',
         apellidoPaterno: 'string',
         apellidoMaterno: 'string'
     });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`datos erroneos`);
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `datos erroneos`);
         return;
     }
 
-    try{
-        const {Usuario} = require('../models/usuario.model');
+    try {
+        const { Usuario } = require('../models/usuario.model');
         const correo = req.body.correo;
 
-        const usuExist = await Usuario.findOne({where: {correo: correo}});
-        if(usuExist){
-            if(usuExist.estado == 0){   //Inactivo(0)
+        const usuExist = await Usuario.findOne({ where: { correo: correo } });
+        if (usuExist) {
+            if (usuExist.estado == 0) {   //Inactivo(0)
                 await usuExist.destroy();
-            }else{
-                response(res,HttpStatus.UNPROCESABLE_ENTITY,`Correo existente`);
+            } else {
+                response(res, HttpStatus.UNPROCESABLE_ENTITY, `Correo existente`);
                 return;
             }
         }
@@ -410,16 +410,16 @@ const modificarUsuario = async (req, res) => {
 
         const usuAdmin = await Usuario.create(data);
 
-        if(usuAdmin){
+        if (usuAdmin) {
             const content = contentNotifAdminRegistrado(usuAdmin.correo, clave);
             enviarCorreo(usuAdmin.correo, content.subject, content.body);
-    
+
             response(res, HttpStatus.OK, `Administrador registrado`);
-        }else{
+        } else {
             response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al crear administrador`);
         }
 
-    }catch(error){
+    } catch (error) {
         logger.error(error);
         response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al crear administrador`);
     }
@@ -430,18 +430,18 @@ const obtenerAnuncios = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, obteniendo anuncios`);
 
-    const usuAdmin = await verificarAdmin(req,res);
-    if(!usuAdmin){
+    const usuAdmin = await verificarAdmin(req, res);
+    if (!usuAdmin) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
 
     //Validamos
-    let validator = new Validator(req.query,{
+    let validator = new Validator(req.query, {
         lastSincro: 'required|date',
     });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`lastSincro faltante`);
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
         return;
     }
 
@@ -450,19 +450,19 @@ const obtenerAnuncios = async (req, res) => {
     const Anuncio = require('../models/anuncio.model');
     const anuncios = await Anuncio.findAll({
         where: {
-            [Op.or]:[
-                {createdAt: { [Op.gt]: lastSincro }},
-                {updatedAt: { [Op.gt]: lastSincro }}
+            [Op.or]: [
+                { createdAt: { [Op.gt]: lastSincro } },
+                { updatedAt: { [Op.gt]: lastSincro } }
             ]
         }
     })
 
-    if(!anuncios.length){
+    if (!anuncios.length) {
         //vacio
-        response(res,HttpStatus.NOT_FOUND,`No hay anuncios.`);
+        response(res, HttpStatus.NOT_FOUND, `No hay anuncios.`);
         return;
-    }else{
-        response(res,HttpStatus.OK,`Anuncios encontrados`,{anuncios: anuncios});
+    } else {
+        response(res, HttpStatus.OK, `Anuncios encontrados`, { anuncios: anuncios });
         return;
     }
 };
@@ -471,73 +471,73 @@ const crearAnuncio = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, Creando anuncio`);
 
-    const usuAdmin = await verificarAdmin(req,res);
-    if(!usuAdmin){
+    const usuAdmin = await verificarAdmin(req, res);
+    if (!usuAdmin) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
 
-    if(!req.file){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Falta imagen`);
+    if (!req.file) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Falta imagen`);
         return;
     }
 
     //Validamos
-    let validator = new Validator(req.body,{
+    let validator = new Validator(req.body, {
         descripcion: 'string',
         url: 'url',
         mostrar: 'boolean',
     });
-    if(validator.fails()){
+    if (validator.fails()) {
         eliminarFotoTmp(req.file);
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Faltan datos`);
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Faltan datos`);
         return;
     }
 
-    let {filename} = req.file;
+    let { filename } = req.file;
 
     const data = {
         descripcion: req.body.descripcion,
         url: req.body.url,
         mostrar: req.body.mostrar,
-        path: pathStr+filename,
+        path: pathStr + filename,
     };
-    try{
+    try {
         const Anuncio = require('../models/anuncio.model');
         let anuncio = await Anuncio.create(data);
         await moverImagen(req.file);
-        response(res,HttpStatus.OK,`Anuncio guardado: ${anuncio.id}`);
-    }catch(error){
-        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al guardar anuncio`);
+        response(res, HttpStatus.OK, `Anuncio guardado: ${anuncio.id}`);
+    } catch (error) {
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al guardar anuncio`);
     }
 };
 
 const actualizarAnuncio = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, Actualizando anuncio`);
 
-    const usuAdmin = await verificarAdmin(req,res);
-    if(!usuAdmin){
+    const usuAdmin = await verificarAdmin(req, res);
+    if (!usuAdmin) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
 
     //Validamos idAnuncio
-    let validator = new Validator(req.params,{
+    let validator = new Validator(req.params, {
         id: 'required|integer',
     });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Falta id de anuncio`);
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Falta id de anuncio`);
         return;
     }
 
     //Validamos datos
-    validator = new Validator(req.body,{
+    validator = new Validator(req.body, {
         descripcion: 'string',
         url: 'url',
         mostrar: 'boolean',
     });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Faltan datos`);
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Faltan datos`);
         return;
     }
 
@@ -547,78 +547,122 @@ const actualizarAnuncio = async (req, res) => {
         url: req.body.url,
         mostrar: req.body.mostrar,
     };
-    try{
+    try {
         const Anuncio = require('../models/anuncio.model');
-    
-        await Anuncio.update(data, {where:{id: idAnuncio}});
-        response(res,HttpStatus.OK,`Anuncio actualizado`);
-    }catch(error){
-        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al actualizar anuncio`);
+
+        await Anuncio.update(data, { where: { id: idAnuncio } });
+        response(res, HttpStatus.OK, `Anuncio actualizado`);
+    } catch (error) {
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al actualizar anuncio`);
     }
 };
 
 const eliminarAnuncio = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, Eliminando anuncios`);
 
-    const usuAdmin = await verificarAdmin(req,res);
-    if(!usuAdmin){
+    const usuAdmin = await verificarAdmin(req, res);
+    if (!usuAdmin) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
-    
+
     //Validamos datos
-    validator = new Validator(req.body,{
+    validator = new Validator(req.body, {
         ids: 'array',
     });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Faltan ids de anuncios`);
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Faltan ids de anuncios`);
         return;
     }
 
     const ids = req.body.ids;
-    try{
+    try {
         const Anuncio = require('../models/anuncio.model');
-        await Anuncio.update({estado: false}, {
-            where:{
-                id: {[Op.in]: ids}
+        await Anuncio.update({ estado: false }, {
+            where: {
+                id: { [Op.in]: ids }
             }
         });
-        response(res,HttpStatus.OK,`Anuncios eliminados`);
-    }catch(error){
+        response(res, HttpStatus.OK, `Anuncios eliminados`);
+    } catch (error) {
         logger.error(error);
-        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al eliminar anuncios`);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al eliminar anuncios`);
     }
 }
 
 const eliminarFotoTmp = async (file) => {
-    if(!file) return;
-    try{
+    if (!file) return;
+    try {
         await fs.remove(destination + filename);
-    }catch(error){
+    } catch (error) {
         logger.error(error);
     }
 }
 
 const moverImagen = async (file) => {
-    if(!file) return;
+    if (!file) return;
 
-    let {filename, destination} = file;
-    
-    try{
+    let { filename, destination } = file;
+
+    try {
         //mueve el archivo
         await fs.move(destination + filename, uploadFolder + filename);
-    }catch(error){
+    } catch (error) {
         logger.error(error);
         return null;
     }
+};
+
+/**
+ * Cambia la clave del usuario
+ */
+const cambiarPassword = async (req, res) => {
+    logger.info(`${req.method} ${req.originalUrl}, cambiando clave de usuario`);
+
+    const usuAdmin = await verificarAdmin(req, res);
+    if (!usuAdmin) {
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
+    //Validamos idAnuncio
+    let validator = new Validator(req.params, {
+        id: 'required|integer',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Falta id de Usuario`);
+        return;
+    }
+
+    let idUsuario = req.params.id;
+
+    //Validamos datos ingresados
+    validator = new Validator(req.body, {
+        claveNueva: 'required|string',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Datos no válidos o incompletos.`);
+        return;
+    }
+    try {
+        const { Usuario } = require('../models/usuario.model');
+        const { claveNueva } = req.body;
+        await Usuario.update({ clave: sha256(claveNueva) }, {
+            where: { id: idUsuario, estado: 1 }
+        });
+        response(res, HttpStatus.OK, `Usuario actualizado`);
+    } catch (error) {
+        logger.error(error);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al cambiar clave.`);
+    }
+
 };
 
 module.exports = {
     getUsuarios,
     modificarUsuario,
     obtenerAnuncios,
-    crearAnuncio, 
-    actualizarAnuncio, 
+    crearAnuncio,
+    actualizarAnuncio,
     eliminarAnuncio,
     agregarAdmin,
     getParametros,
@@ -626,4 +670,5 @@ module.exports = {
     actualizarParametrosCorreo,
     actualizarParametrosSMTP,
     probarCorreo,
+    cambiarPassword,
 };

@@ -1,17 +1,18 @@
 const express = require('express');
 const {
-    getUsuarios, 
+    getUsuarios,
     modificarUsuario,
-    obtenerAnuncios, 
+    obtenerAnuncios,
     crearAnuncio,
-    actualizarAnuncio, 
+    actualizarAnuncio,
     eliminarAnuncio,
     agregarAdmin,
     getParametros,
     actualizarParametros,
     actualizarParametrosCorreo,
     actualizarParametrosSMTP,
-    probarCorreo
+    probarCorreo,
+    cambiarPassword,
 } = require('../controller/admin.controller');
 const multer = require('multer');
 const uuid4 = require('uuid4');
@@ -19,14 +20,14 @@ const path = require('path');
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-      cb(null, 'temp_uploads/')
+        cb(null, 'temp_uploads/')
     },
     filename: function (req, file, cb) {
-      cb(null, uuid4() + path.extname(file.originalname)) //Appending extension
+        cb(null, uuid4() + path.extname(file.originalname)) //Appending extension
     }
 });
 
-const upload = multer({storage: storage});
+const upload = multer({ storage: storage });
 
 const adminRoutes = express.Router();
 
@@ -37,7 +38,7 @@ adminRoutes.route('/parametros')
 
 adminRoutes.route('/parametros/smtp')
     .put(actualizarParametrosSMTP);
-    
+
 adminRoutes.route('/parametros/correo')
     .post(probarCorreo)
     .put(actualizarParametrosCorreo);
@@ -49,9 +50,12 @@ adminRoutes.route('/usuarios')
 adminRoutes.route('/usuarios/:id')
     .put(modificarUsuario);
 
+adminRoutes.route('/usuarios/:id/password')
+    .put(cambiarPassword);
+
 adminRoutes.route('/anuncios')
     .get(obtenerAnuncios)
-    .post(upload.single('imagen'),crearAnuncio)
+    .post(upload.single('imagen'), crearAnuncio)
     .delete(eliminarAnuncio);
 
 adminRoutes.route('/anuncios/:id')
