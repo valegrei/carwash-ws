@@ -28,5 +28,6 @@ Servicio.init({
     sequelize: db.sequelize
 });
 Servicio.belongsTo(Usuario,{as: 'distrib', foreignKey: 'idDistrib'});
+Usuario.hasMany(Servicio,{foreignKey: 'idDistrib'});
 
 module.exports = Servicio;

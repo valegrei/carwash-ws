@@ -44,19 +44,33 @@ const obtenerLocales = async (req, res) => {
 
     const Direccion = require('../models/direccion.model');
     const { Usuario } = require('../models/usuario.model');
-    const {latNE, longNE, latSW, longSW} = req.query;
+    const Servicio = require('../models/servicio.model');
+    const Favorito = require('../models/favorito.model');
+    const { latNE, longNE, latSW, longSW } = req.query;
 
     let locales = await Direccion.findAll({
         attributes: ['id', 'departamento', 'provincia', 'distrito', 'ubigeo',
             'direccion', 'latitud', 'longitud', 'estado', 'idUsuario'],
-        include: {
+        include: [{
             model: Usuario,
             attributes: ['id', 'razonSocial', 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2'],
+            include: {
+                attributes: ['id', 'nombre', 'precio'],
+                model: Servicio,
+                where: {
+                    estado: true,
+                },
+            },
             where: {
                 estado: true,
                 idTipoUsuario: 3,   //distribuidores
-            }
-        },
+            },
+        }, {
+            model: Favorito,
+            attributes: ['id', 'idCliente', 'idLocal', 'estado'],
+            where: { estado: true },
+            required: false,
+        }],
         where: {
             [Op.and]: [
                 { latitud: { [Op.gte]: latSW } },
@@ -65,7 +79,7 @@ const obtenerLocales = async (req, res) => {
                 { longitud: { [Op.lte]: longNE } },
                 { estado: true },
             ],
-        }
+        },
     });
 
     if (!locales.length) {
@@ -76,6 +90,303 @@ const obtenerLocales = async (req, res) => {
     }
 };
 
+
+const obtenerHorarios = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, obteniendo Horarios`);
+
+    const usuCli = await verificarCliente(req, res);
+    if (!usuCli) {
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
+
+    validator = new Validator(req.query, {
+        idLocal: 'required|integer',
+        fecha: 'required|date',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Datos faltantes`);
+        return;
+    }
+
+    const Horario = require('../models/horario.model');
+    const Reserva = require('../models/reserva.model');
+    const { idLocal, fecha } = req.query;
+
+    let horarios = await Horario.findAll({
+        attributes: ['id', 'fecha', 'horaIni', 'horaFin'],
+        include: {
+            model: Reserva,
+            attributes: ['id'],
+            where: {
+                idHorario: null
+            },
+            required: false,
+        },
+        where: {
+            idLocal: idLocal,
+            fecha: fecha,
+            estado: true,
+        },
+    });
+
+    if (!horarios.length) {
+        //vacio
+        response(res, HttpStatus.NOT_FOUND, `No hay horarios disponibles`);
+    } else {
+        response(res, HttpStatus.OK, `Horarios encontrados`, { horarios: horarios });
+    }
+};
+
+const crearReserva = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, Creando reserva`);
+
+    const usuCli = await verificarCliente(req, res);
+    if (!usuCli) {
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
+
+    //Validamos
+    let validator = new Validator(req.body, {
+        idHorario: 'required|integer',
+        idCliente: 'required|integer',
+        idVehiculo: 'required|integer',
+        'servicios.*.id': 'required|integer',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Faltan datos`);
+        return;
+    }
+
+    const dataReserva = {
+        idHorario: req.body.idHorario,
+        idCliente: req.body.idCliente,
+        idVehiculo: req.body.idVehiculo,
+        Servicios: req.body.servicios,
+    };
+    try {
+        const Reserva = require('../models/reserva.model');
+        const Servicio = require('../models/servicio.model');
+        let reserva = await Reserva.create(dataReserva, {
+            include: Servicio,
+        });
+        response(res, HttpStatus.OK, `Reserva guardada: ${reserva.id}`);
+    } catch (error) {
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al guardar reserva`);
+    }
+};
+
+
+const obtenerReservas = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, obteniendo reservas`);
+
+    const usuCli = await verificarCliente(req, res);
+    if (!usuCli) {
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
+
+    //Validamos
+    let validator = new Validator(req.query, {
+        fecha: 'required|string',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
+        return;
+    }
+
+    let fecha = req.query.fecha;
+
+    const Horario = require('../models/horario.model');
+    const Reserva = require('../models/reserva.model');
+    const Servicio = require('../models/servicio.model');
+    const { Usuario } = require('../models/usuario.model');
+    const Direccion = require('../models/direccion.model');
+    const reservas = await Reserva.findAll({
+        attributes: ['id', 'idCliente', 'idVehiculo', 'estado'],
+        include: [
+            {
+                model: Horario,
+                attributes: ['id', 'fecha', 'horaIni', 'horaFin'],
+                include: [
+                    {
+                        model: Direccion,
+                        as: 'Local',
+                        attributes: ['id', 'departamento', 'provincia', 'distrito', 'ubigeo',
+                            'direccion', 'latitud', 'longitud', 'estado', 'idUsuario'],
+                    },
+                    {
+                        model: Usuario,
+                        as: 'Distrib',
+                        attributes: ['id', 'razonSocial', 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2'],
+                    },
+                ],
+                where: {
+                    [Op.gte]: { fecha: fecha },
+                },
+            },
+            {
+                model: Servicio,
+                attributes: ['id', 'nombre', 'precio']
+            },
+        ],
+        where: {
+            idCliente: usuCli.id,
+            estado: true,
+        }
+    })
+
+    if (!reservas.length) {
+        //vacio
+        response(res, HttpStatus.NOT_FOUND, `No hay reservas.`);
+        return;
+    } else {
+        response(res, HttpStatus.OK, `Reservas encontrados`, { reservas: reservas });
+        return;
+    }
+};
+
+const anularReserva = async (req, res) => {
+    logger.info(`${req.method} ${req.originalUrl}, Anular Reserva`);
+    const usuCli = await verificarCliente(req, res);
+    if (!usuCli) {
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
+    //Validamos
+    let validator = new Validator(req.params, {
+        idReserva: 'required|integer',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
+        return;
+    }
+
+    const idReserva = req.params.idReserva;
+    try {
+        const Reserva = require('../models/reserva.model');
+        await Reserva.destroy({ where: { id: idReserva } });
+        response(res, HttpStatus.OK, `Reserva anulada`);
+    } catch (error) {
+        logger.error(error);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al anular reserva`);
+    }
+}
+
+const agregarFavorito = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, Agregando Favorito`);
+
+    const usuCli = await verificarCliente(req, res);
+    if (!usuCli) {
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
+
+    //Validamos
+    let validator = new Validator(req.body, {
+        idLocal: 'required|string',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Falta idLocal`);
+        return;
+    }
+
+    const data = {
+        idLocal: req.body.idLocal,
+        idCliente: usuCli.id,
+    };
+    try {
+        const Favorito = require('../models/favorito.model');
+        let favorito = await Favorito.create(data);
+        response(res, HttpStatus.OK, `Favorito guardado: ${favorito.id}`);
+    } catch (error) {
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al guardar favorito`);
+    }
+};
+
+
+const obtenerLocalesFavoritos = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, obteniendo locales favoritos`);
+
+    const usuCli = await verificarCliente(req, res);
+    if (!usuCli) {
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
+
+    const Direccion = require('../models/direccion.model');
+    const Favorito = require('../models/favorito.model');
+    const { Usuario } = require('../models/usuario.model');
+
+    let locales = await Direccion.findAll({
+        attributes: ['id', 'departamento', 'provincia', 'distrito', 'ubigeo',
+            'direccion', 'latitud', 'longitud', 'estado', 'idUsuario'],
+        include: [{
+            model: Usuario,
+            attributes: ['id', 'razonSocial', 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2'],
+            include: {
+                attributes: ['id', 'nombre', 'precio'],
+                model: Servicio,
+                where: {
+                    estado: true,
+                },
+            },
+            where: {
+                estado: true,
+                idTipoUsuario: 3,   //distribuidores
+            },
+        }, {
+            model: Favorito,
+            attributes: ['id', 'idCliente', 'idLocal', 'estado'],
+            where: { estado: true, idCliente: usuCli.id },
+            required: true,
+        }],
+        where: { estado: true },
+    });
+
+    if (!locales.length) {
+        //vacio
+        response(res, HttpStatus.NOT_FOUND, `No hay locales favoritos.`);
+        return;
+    } else {
+        response(res, HttpStatus.OK, `Locales Favoritos encontrados`, { locales: locales });
+        return;
+    }
+};
+
+
+const eliminarFavorito = async (req, res) => {
+    logger.info(`${req.method} ${req.originalUrl}, Eliminando Favorito`);
+    const usuCli = await verificarCliente(req, res);
+    if (!usuCli) {
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
+    //Validamos
+    let validator = new Validator(req.params, {
+        idFavorito: 'required|integer',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
+        return;
+    }
+
+    const idFavorito = req.params.idFavorito;
+    try {
+        const Favorito = require('../models/favorito.model');
+        await Favorito.update({ estado: false }, { where: { id: idFavorito } });
+        response(res, HttpStatus.OK, `Favorito eliminado`);
+    } catch (error) {
+        logger.error(error);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al eliminar Favorito`);
+    }
+}
 
 const obtenerVehiculos = async (req, res) => {
 
@@ -280,4 +591,11 @@ module.exports = {
     actualizarVehiculo,
     eliminarVehiculo,
     obtenerLocales,
+    obtenerHorarios,
+    agregarFavorito,
+    obtenerLocalesFavoritos,
+    eliminarFavorito,
+    crearReserva,
+    anularReserva,
+    obtenerReservas,
 }

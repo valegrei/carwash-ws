@@ -6,6 +6,7 @@ const Vehiculo = require('./vehiculo.model');
 const Direccion = require('./direccion.model');
 const HorarioConfig = require('./horario.config.model');
 const Horario = require('./horario.model');
+const Favorito = require('./favorito.model');
 const Reserva = require('./reserva.model');
 const Servicio = require('./servicio.model');
 const {ParametroTipo, Parametro} = require('./parametro.model');
