@@ -104,6 +104,7 @@ const obtenerHorarios = async (req, res) => {
     validator = new Validator(req.query, {
         idLocal: 'required|integer',
         fecha: 'required|date',
+        fechaHora: 'required|date',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `Datos faltantes`);
@@ -112,7 +113,7 @@ const obtenerHorarios = async (req, res) => {
 
     const Horario = require('../models/horario.model');
     const Reserva = require('../models/reserva.model');
-    const { idLocal, fecha } = req.query;
+    const { idLocal, fecha, fechaHora } = req.query;
 
     let horarios = await Horario.findAll({
         attributes: ['id', 'fecha', 'horaIni', 'horaFin'],
@@ -124,6 +125,7 @@ const obtenerHorarios = async (req, res) => {
         where: {
             idLocal: idLocal,
             fecha: fecha,
+            fechaHora: {[Op.gte] : fechaHora},
             estado: true,
             '$Reserva.idHorario$': null,
         },

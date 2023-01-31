@@ -1,4 +1,3 @@
-const { where } = require("sequelize");
 const HorarioConfig = require("../models/horario.config.model");
 const Horario = require("../models/horario.model");
 const { Op } = require('sequelize');
