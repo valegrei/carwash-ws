@@ -12,6 +12,10 @@ Horario.init({
         primaryKey: true,
         autoIncrement: true
     },
+    fechaHora: {
+        type: DataTypes.DATE,
+        allowNull: false,
+    },
     fecha: {
         type: DataTypes.DATEONLY,
         allowNull: false,

@@ -14,6 +14,7 @@ const db = require('./models');
 const initData = require('./models/init.data');
 const jwtMiddleware = require('./middleware/jwt.middleware');
 const fs = require('fs-extra');
+const {generarHorariosTask} = require('./util/scheduler');
 
 //Crea directorios para guardar archivos
 fs.ensureDir('temp_uploads/',(err) =>{
@@ -40,6 +41,10 @@ db.sequelize.sync().then(()=>{ //sync({ force: true }) "Drop and re-sync db."
     logger.info('Todos los modelos fueron sincronizados con exito!');
     initData();
 });
+
+//Job para generar horarios cada mes
+generarHorariosTask.start();
+
 //Jwt middleware
 app.use('/api',jwtMiddleware);
 app.use('/files',jwtMiddleware);
@@ -60,3 +65,4 @@ app.use(function (err, req, res, next) {    //Manejar error de token invalido
     }
 });
 app.listen(PORT, () => logger.info(`Server runing on: ${ip.address()}:${PORT}`));
+

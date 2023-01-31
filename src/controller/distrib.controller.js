@@ -3,7 +3,7 @@ const logger = require('../util/logger');
 const HttpStatus = require('../util/http.status');
 const Validator = require('validatorjs');
 const { Op } = require('sequelize');
-const {generarHorarios,modificarHorarios,eliminarHorarios} = require('../util/scheduler');
+const {generarParaEsteMesOSiguiente,modificarHorarios,eliminarHorarios} = require('../util/scheduler');
 
 const verificarDistrib = async (req, res) => {
     const idUsuario = req.auth.data.idUsuario;
@@ -243,7 +243,7 @@ const agregarHorarioConfig = async (req, res) => {
         if (!nuevoHorarioConfig) {
             response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al crear Configuracion de Horario`);
         } else {
-            generarHorarios(nuevoHorarioConfig);
+            generarParaEsteMesOSiguiente(nuevoHorarioConfig);
             response(res, HttpStatus.OK, `Configuracion de Horario creado`);
         }
     } catch (error) {

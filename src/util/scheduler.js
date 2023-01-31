@@ -2,54 +2,90 @@ const { where } = require("sequelize");
 const HorarioConfig = require("../models/horario.config.model");
 const Horario = require("../models/horario.model");
 const { Op } = require('sequelize');
+const logger = require('./logger');
+const cron = require('node-cron');
 
-const generarTodosHorarios = async () => {
+const generarHorariosTask = cron.schedule('0 1 25 * *', () => {
+    logger.info('Ejecutando el 25 a las 01:00 at America/Lima timezone');
+    generarTodosHorariosSiguienteMes();
+}, {
+    scheduled: true,
+    timezone: "America/Lima"
+});
+
+const generarTodosHorariosSiguienteMes = async () => {
     const horarioConfigs = await HorarioConfig.findAll({
         where: { estado: true }
     });
     if (!horarioConfigs) {
         return; //Vacio
     }
-    horarioConfigs.forEach(e => {
-        generarHorarios(e);
+    horarioConfigs.forEach(async (e) => {
+        try {
+            await generarParaSiguienteMes(e);
+        } catch (error) { logger.error(error) }
     });
 }
 
-const generarHorarios = async (horarioConfig, dias = 30) => {
+const generarParaEsteMesOSiguiente = async (horarioConfig) => {
+    const fechaHoy = new Date();
+    if (fechaHoy.getDate() < 25) {
+        //Se crea solo para ese mes
+        const ultimoDiaEsteMes = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth() + 1, 0)
+        await generarHorariosPorFecha(horarioConfig, fechaHoy, ultimoDiaEsteMes);
+    } else {
+        //Tambien se crea para el siguiente mes 
+        const ultimoDiaSiguienteMes = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth() + 2, 0)
+        await generarHorariosPorFecha(horarioConfig, fechaHoy, ultimoDiaSiguienteMes);
+    }
+};
+
+const generarParaSiguienteMes = async (horarioConfig) => {
+    const fechaHoy = new Date();
+    const primerDiaSiguienteMes = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth() + 2, 1)
+    const ultimoDiaSiguienteMes = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth() + 2, 0)
+    await generarHorariosPorFecha(horarioConfig, primerDiaSiguienteMes, ultimoDiaSiguienteMes);
+};
+
+const generarHorariosPorFecha = async (horarioConfig, fechaInicio, fechaFin) => {
     const { domingo, lunes, martes, miercoles, jueves, viernes, sabado,
         horaIni, minIni, horaFin, minFin, intervalo, idDistrib, idLocal, id } = horarioConfig.dataValues;
     const diasSemana = [domingo, lunes, martes, miercoles, jueves, viernes, sabado];
     const minutosIni = horaIni * 60 + minIni;
     const minutosFin = horaFin * 60 + minFin;
     let nuevosHorarios = [];
-    let fecha = new Date();
-    let date = new Date();
-    const ultimaFecha = date.setDate(date.getDate() + dias);
-    while (fecha <= ultimaFecha) {
-        if (diasSemana[fecha.getUTCDay()]) {
+    let fechaIter = new Date(fechaInicio.getTime());
+    const createdAt = Date.now();
+    while (fecha <= fechaFin) {
+        if (diasSemana[fechaIter.getDay()]) {
             //procede a generar horarios para ese dia
             let minutoHorarioInicio = minutosIni;
             let minutoHorarioFin = minutoHorarioInicio + intervalo;
             while (minutoHorarioFin <= minutosFin) {
+                let fecha = fechaIter.toLocaleDateString("fr-CA");//yyyy-MM-dd
+                let horaIni = minToTime(minutoHorarioInicio);
+                let horaFin = minToTime(minutoHorarioFin);
+                let fechaHora = `${fecha} ${horaIni}`;
                 nuevosHorarios.push({
-                    fecha: fecha.toISOString().slice(0, 10),
-                    horaIni: minToTime(minutoHorarioInicio),
-                    horaFin: minToTime(minutoHorarioFin),
+                    fechaHora: fechaHora,
+                    fecha: fecha,
+                    horaIni: horaIni,
+                    horaFin: horaFin,
                     estado: true,
                     idDistrib: idDistrib,
                     idLocal: idLocal,
                     idHorarioConfig: id,
-                    createdAt: Date.now(),
-                    updatedAt: Date.now(),
+                    createdAt: createdAt,
+                    updatedAt: createdAt,
                 });
                 minutoHorarioInicio = minutoHorarioFin;
                 minutoHorarioFin = minutoHorarioFin + intervalo;
             }
         }
-        fecha.setDate(fecha.getDate() + 1);
+        fechaIter.setDate(fechaIter.getDate() + 1);
     }
     //Insertando
-    Horario.bulkCreate(nuevosHorarios, {
+    await Horario.bulkCreate(nuevosHorarios, {
         updateOnDuplicate: ['estado', 'idLocal', 'updatedAt']
     });
 }
@@ -58,17 +94,15 @@ const eliminarHorarios = async (idHorarioConfig) => {
     await Horario.update({ estado: false }, {
         where: {
             idHorarioConfig: idHorarioConfig,
-            fecha: { [Op.gte]: (new Date()).toISOString().slice(0, 10) }
+            fecha: { [Op.gte]: (new Date()).toLocaleDateString("fr-CA") }
         }
     });
 }
 
 const modificarHorarios = async (idHorarioConfig) => {
-    try {
-        await eliminarHorarios(idHorarioConfig);
-    } catch (e) { }
+    await eliminarHorarios(idHorarioConfig);
     const horarioConfig = await HorarioConfig.findByPk(idHorarioConfig);
-    generarHorarios(horarioConfig);
+    generarParaEsteMesOSiguiente(horarioConfig);
 }
 
 const minToTime = (minutos) => {
@@ -80,8 +114,9 @@ const minToTime = (minutos) => {
 }
 
 module.exports = {
-    generarTodosHorarios,
-    generarHorarios,
+    generarTodosHorariosSiguienteMes,
+    generarParaEsteMesOSiguiente,
     eliminarHorarios,
     modificarHorarios,
+    generarHorariosTask,
 }
