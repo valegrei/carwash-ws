@@ -12,16 +12,12 @@ Direccion.init({
         autoIncrement: true,
     }, departamento:{
         type: DataTypes.STRING(50),
-        allowNull: false,
     }, provincia:{
         type: DataTypes.STRING(50),
-        allowNull: false,
     }, distrito:{
         type: DataTypes.STRING(50),
-        allowNull: false,
     }, ubigeo:{
         type: DataTypes.STRING(6),
-        allowNull: false,
     }, direccion: {
         type: DataTypes.STRING(200),
         allowNull: false,
@@ -33,7 +29,11 @@ Direccion.init({
         type: DataTypes.BOOLEAN,
         defaultValue: 1,
         allowNulls: false
-    }
+    }, tipo: {
+        type: DataTypes.TINYINT,
+        defaultValue: 1,
+        allowNulls: false
+    },
 }, {
     sequelize: db.sequelize
 });

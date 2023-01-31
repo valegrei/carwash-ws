@@ -119,15 +119,13 @@ const obtenerHorarios = async (req, res) => {
         include: {
             model: Reserva,
             attributes: ['id'],
-            where: {
-                idHorario: null
-            },
             required: false,
         },
         where: {
             idLocal: idLocal,
             fecha: fecha,
             estado: true,
+            '$Reserva.idHorario$': null,
         },
     });
 
@@ -165,16 +163,26 @@ const crearReserva = async (req, res) => {
         idHorario: req.body.idHorario,
         idCliente: req.body.idCliente,
         idVehiculo: req.body.idVehiculo,
-        Servicios: req.body.servicios,
     };
+    let servicios = req.body.servicios;
+
     try {
         const Reserva = require('../models/reserva.model');
-        const Servicio = require('../models/servicio.model');
-        let reserva = await Reserva.create(dataReserva, {
-            include: Servicio,
+        const ReservaServicios = require('../models/reserva.servicios.model');
+        let reserva = await Reserva.create(dataReserva);
+        let reservaServicios = [];
+        servicios.forEach(e => {
+            reservaServicios.push({
+                ReservaId: reserva.id,
+                ServicioId: e.id,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+            });
         });
+        await ReservaServicios.bulkCreate(reservaServicios);
         response(res, HttpStatus.OK, `Reserva guardada: ${reserva.id}`);
     } catch (error) {
+        logger.error(error)
         response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al guardar reserva`);
     }
 };
@@ -204,48 +212,62 @@ const obtenerReservas = async (req, res) => {
     const Horario = require('../models/horario.model');
     const Reserva = require('../models/reserva.model');
     const Servicio = require('../models/servicio.model');
+    const Vehiculo = require('../models/vehiculo.model');
     const { Usuario } = require('../models/usuario.model');
     const Direccion = require('../models/direccion.model');
-    const reservas = await Reserva.findAll({
-        attributes: ['id', 'idCliente', 'idVehiculo', 'estado'],
-        include: [
-            {
-                model: Horario,
-                attributes: ['id', 'fecha', 'horaIni', 'horaFin'],
-                include: [
-                    {
-                        model: Direccion,
-                        as: 'Local',
-                        attributes: ['id', 'departamento', 'provincia', 'distrito', 'ubigeo',
-                            'direccion', 'latitud', 'longitud', 'estado', 'idUsuario'],
+    try {
+        const reservas = await Reserva.findAll({
+            attributes: ['id'],
+            include: [
+                {
+                    model: Horario,
+                    attributes: ['id', 'fecha', 'horaIni', 'horaFin'],
+                    include: [
+                        {
+                            model: Direccion,
+                            as: 'Local',
+                            attributes: ['id', 'direccion'],
+                        },
+                        {
+                            model: Usuario,
+                            as: 'Distrib',
+                            attributes: ['id', 'razonSocial'],
+                        },
+                    ],
+                    where: {
+                        fecha: { [Op.gte]: fecha },
                     },
-                    {
-                        model: Usuario,
-                        as: 'Distrib',
-                        attributes: ['id', 'razonSocial', 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2'],
-                    },
-                ],
-                where: {
-                    [Op.gte]: { fecha: fecha },
                 },
+                {
+                    model: Servicio,
+                    attributes: ['id', 'nombre', 'precio']
+                },
+                {
+                    model: Vehiculo,
+                    attributes: ['id', 'marca', 'modelo', 'year', 'placa']
+                },
+            ],
+            where: {
+                idCliente: usuCli.id,
+                estado: true,
             },
-            {
-                model: Servicio,
-                attributes: ['id', 'nombre', 'precio']
-            },
-        ],
-        where: {
-            idCliente: usuCli.id,
-            estado: true,
-        }
-    })
+            order:[
+                [{model: Horario, as: 'Horario'}, 'fecha', 'ASC'],
+                [{model: Horario, as: 'Horario'}, 'horaIni', 'ASC'],
+            ]
+        })
 
-    if (!reservas.length) {
-        //vacio
-        response(res, HttpStatus.NOT_FOUND, `No hay reservas.`);
-        return;
-    } else {
-        response(res, HttpStatus.OK, `Reservas encontrados`, { reservas: reservas });
+        if (!reservas.length) {
+            //vacio
+            response(res, HttpStatus.NOT_FOUND, `No hay reservas.`);
+            return;
+        } else {
+            response(res, HttpStatus.OK, `Reservas encontrados`, { reservas: reservas });
+            return;
+        }
+    } catch (error) {
+        logger.error(error);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al buscar reservas`);
         return;
     }
 };

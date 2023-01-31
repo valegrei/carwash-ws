@@ -26,7 +26,7 @@ const generarHorarios = async (horarioConfig, dias = 30) => {
     let date = new Date();
     const ultimaFecha = date.setDate(date.getDate() + dias);
     while (fecha <= ultimaFecha) {
-        if (diasSemana[fecha.getDay()]) {
+        if (diasSemana[fecha.getUTCDay()]) {
             //procede a generar horarios para ese dia
             let minutoHorarioInicio = minutosIni;
             let minutoHorarioFin = minutoHorarioInicio + intervalo;

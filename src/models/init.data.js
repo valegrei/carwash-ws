@@ -9,6 +9,7 @@ const Horario = require('./horario.model');
 const Favorito = require('./favorito.model');
 const Reserva = require('./reserva.model');
 const Servicio = require('./servicio.model');
+const ReservaServicios = require('./reserva.servicios.model');
 const {ParametroTipo, Parametro} = require('./parametro.model');
 const logger = require('../util/logger');
 

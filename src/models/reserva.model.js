@@ -26,7 +26,5 @@ Reserva.belongsTo(Horario, {foreignKey: 'idHorario'});
 Horario.hasOne(Reserva, {foreignKey: 'idHorario'});
 Reserva.belongsTo(Usuario, {as: 'cliente', foreignKey: 'idCliente'});
 Reserva.belongsTo(Vehiculo, {foreignKey: 'idVehiculo'});
-Reserva.belongsToMany(Servicio, {through: 'ReservaServicios'});
-Servicio.belongsToMany(Reserva, {through: 'ReservaServicios'});
 
 module.exports = Reserva;

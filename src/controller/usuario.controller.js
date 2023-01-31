@@ -149,7 +149,7 @@ const obtenerDirecciones = async (req, res) => {
 
     let direcciones = await Direccion.findAll({
         attributes: ['id', 'departamento', 'provincia', 'distrito', 'ubigeo',
-            'direccion', 'latitud', 'longitud', 'estado', 'idUsuario'],
+            'direccion', 'latitud', 'longitud', 'estado', 'tipo','idUsuario'],
         where: {
             [Op.or]: [
                 { createdAt: { [Op.gt]: lastSincro } },
@@ -174,13 +174,14 @@ const agregarDireccion = async (req, res) => {
     let idUsuario = req.auth.data.idUsuario;
 
     validator = new Validator(req.body, {
-        'departamento': 'required|string',
-        'provincia': 'required|string',
-        'distrito': 'required|string',
-        'ubigeo': 'required|string',
+        'departamento': 'string',
+        'provincia': 'string',
+        'distrito': 'string',
+        'ubigeo': 'string',
         'direccion': 'required|string',
         'latitud': 'required|string',
         'longitud': 'required|string',
+        'tipo': 'required|integer',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `datos erroneos`);
@@ -196,6 +197,7 @@ const agregarDireccion = async (req, res) => {
             direccion: req.body.direccion,
             latitud: req.body.latitud,
             longitud: req.body.longitud,
+            tipo: req.body.tipo,
             idUsuario: idUsuario
         }
         const Direccion = require('../models/direccion.model');
@@ -229,13 +231,14 @@ const modificarDireccion = async (req, res) => {
     let idUsuario = req.auth.data.idUsuario;
 
     validator = new Validator(req.body, {
-        'departamento': 'required|string',
-        'provincia': 'required|string',
-        'distrito': 'required|string',
-        'ubigeo': 'required|string',
+        'departamento': 'string',
+        'provincia': 'string',
+        'distrito': 'string',
+        'ubigeo': 'string',
         'direccion': 'required|string',
         'latitud': 'required|string',
         'longitud': 'required|string',
+        'tipo': 'required|integer',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `datos erroneos`);
@@ -252,6 +255,7 @@ const modificarDireccion = async (req, res) => {
             direccion: req.body.direccion,
             latitud: req.body.latitud,
             longitud: req.body.longitud,
+            tipo: req.body.tipo,
         }
         const Direccion = require('../models/direccion.model');
         await Direccion.update(data, { where: { id: idDireccion, idUsuario: idUsuario } });
