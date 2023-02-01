@@ -3,7 +3,7 @@ const logger = require('../util/logger');
 const HttpStatus = require('../util/http.status');
 const Validator = require('validatorjs');
 const { Op } = require('sequelize');
-const {generarParaEsteMesOSiguiente,modificarHorarios,eliminarHorarios} = require('../util/scheduler');
+const { generarParaEsteMesOSiguiente, modificarHorarios, eliminarHorarios } = require('../util/scheduler');
 
 const verificarDistrib = async (req, res) => {
     const idUsuario = req.auth.data.idUsuario;
@@ -22,7 +22,7 @@ const obtenerServicios = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, obteniendo servicios`);
 
     const usuDis = await verificarDistrib(req, res);
-    if(!usuDis){
+    if (!usuDis) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
@@ -64,7 +64,7 @@ const agregarServicio = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, creando servicio`);
 
     const usuDis = await verificarDistrib(req, res);
-    if(!usuDis){
+    if (!usuDis) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
@@ -106,7 +106,7 @@ const modificarServicio = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, modificando servicios`);
 
     const usuDis = await verificarDistrib(req, res);
-    if(!usuDis){
+    if (!usuDis) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
@@ -147,7 +147,7 @@ const obtenerHorariosConfig = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, obteniendo Configuraciones de Horario`);
 
     const usuDis = await verificarDistrib(req, res);
-    if(!usuDis){
+    if (!usuDis) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
@@ -167,8 +167,8 @@ const obtenerHorariosConfig = async (req, res) => {
 
     let horarioConfigs = await HorarioConfig.findAll({
         attributes: ['id', 'lunes', 'martes', 'miercoles', 'jueves',
-            'viernes', 'sabado', 'domingo', 'horaIni', 'minIni','horaFin',
-            'minFin','intervalo', 'estado', 'idDistrib','idLocal'],
+            'viernes', 'sabado', 'domingo', 'horaIni', 'minIni', 'horaFin',
+            'minFin', 'intervalo', 'estado', 'idDistrib', 'idLocal'],
         where: {
             [Op.or]: [
                 { createdAt: { [Op.gt]: lastSincro } },
@@ -192,7 +192,7 @@ const agregarHorarioConfig = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, creando Configuracion de Horario`);
 
     const usuDis = await verificarDistrib(req, res);
-    if(!usuDis){
+    if (!usuDis) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
@@ -257,7 +257,7 @@ const modificarHorarioConfig = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, modificando Configuracion de Horario`);
 
     const usuDis = await verificarDistrib(req, res);
-    if(!usuDis){
+    if (!usuDis) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
@@ -324,7 +324,7 @@ const eliminarHorarioConfig = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, eliminar Configuracion de Horario`);
 
     const usuDis = await verificarDistrib(req, res);
-    if(!usuDis){
+    if (!usuDis) {
         response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
         return;
     }
@@ -357,6 +357,95 @@ const eliminarHorarioConfig = async (req, res) => {
     }
 }
 
+
+
+const obtenerReservas = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, obteniendo reservas`);
+
+    const usuDis = await verificarDistrib(req, res);
+    if (!usuDis) {
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
+
+    //Validamos
+    let validator = new Validator(req.query, {
+        fecha: 'date',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `formato de fecha erroneo`);
+        return;
+    }
+
+    const whereHorario = {};
+
+    if (!req.query.fecha) {
+        let fecha = (new Date()).toLocaleDateString("fr-CA");
+        whereHorario.fecha = { [Op.gte]: fecha };
+    } else {
+        whereHorario.fecha = req.query.fecha;
+    }
+    whereHorario.idDistrib = usuDis.id;
+
+    const Horario = require('../models/horario.model');
+    const Reserva = require('../models/reserva.model');
+    const Servicio = require('../models/servicio.model');
+    const Vehiculo = require('../models/vehiculo.model');
+    const { Usuario } = require('../models/usuario.model');
+    const Direccion = require('../models/direccion.model');
+    try {
+        const reservas = await Reserva.findAll({
+            attributes: ['id'],
+            include: [
+                {
+                    model: Horario,
+                    attributes: ['id', 'fecha', 'horaIni', 'horaFin'],
+                    include: {
+                        model: Direccion,
+                        as: 'Local',
+                        attributes: ['id', 'direccion'],
+                    },
+                    where: whereHorario,
+                },
+                {
+                    model: Servicio,
+                    attributes: ['id', 'nombre', 'precio']
+                },
+                {
+                    model: Vehiculo,
+                    attributes: ['id', 'marca', 'modelo', 'year', 'placa']
+                }, {
+                    model: Usuario,
+                    as: "cliente",
+                    attributes: ['id', 'correo', 'nombres', 'apellidoPaterno', 'apellidoMaterno'
+                        , 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2']
+                }
+            ],
+            where: {
+                estado: true,
+            },
+            order: [
+                [{ model: Horario, as: 'Horario' }, 'fecha', 'ASC'],
+                [{ model: Horario, as: 'Horario' }, 'horaIni', 'ASC'],
+            ]
+        })
+
+        if (!reservas.length) {
+            //vacio
+            response(res, HttpStatus.NOT_FOUND, `No hay reservas.`);
+            return;
+        } else {
+            response(res, HttpStatus.OK, `Reservas encontrados`, { reservas: reservas });
+            return;
+        }
+    } catch (error) {
+        logger.error(error);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al buscar reservas`);
+        return;
+    }
+};
+
 module.exports = {
     obtenerServicios,
     agregarServicio,
@@ -365,4 +454,5 @@ module.exports = {
     agregarHorarioConfig,
     modificarHorarioConfig,
     eliminarHorarioConfig,
+    obtenerReservas,
 };

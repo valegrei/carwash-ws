@@ -202,14 +202,21 @@ const obtenerReservas = async (req, res) => {
 
     //Validamos
     let validator = new Validator(req.query, {
-        fecha: 'required|string',
+        fecha: 'date',
     });
     if (validator.fails()) {
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `formato de fecha erroneo`);
         return;
     }
+    
+    const whereHorario = {};
 
-    let fecha = req.query.fecha;
+    if (!req.query.fecha) {
+        let fecha = (new Date()).toLocaleDateString("fr-CA");
+        whereHorario.fecha = { [Op.gte]: fecha };
+    } else {
+        whereHorario.fecha = req.query.fecha;
+    }
 
     const Horario = require('../models/horario.model');
     const Reserva = require('../models/reserva.model');
@@ -236,9 +243,7 @@ const obtenerReservas = async (req, res) => {
                             attributes: ['id', 'razonSocial'],
                         },
                     ],
-                    where: {
-                        fecha: { [Op.gte]: fecha },
-                    },
+                    where: whereHorario,
                 },
                 {
                     model: Servicio,
