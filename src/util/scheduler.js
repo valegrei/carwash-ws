@@ -28,14 +28,15 @@ const generarTodosHorariosSiguienteMes = async () => {
 
 const generarParaEsteMesOSiguiente = async (horarioConfig) => {
     const fechaHoy = new Date();
+    const fechaInicio = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth(), fechaHoy.getDate())
     if (fechaHoy.getDate() < 25) {
         //Se crea solo para ese mes
         const ultimoDiaEsteMes = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth() + 1, 0)
-        await generarHorariosPorFecha(horarioConfig, fechaHoy, ultimoDiaEsteMes);
+        await generarHorariosPorFecha(horarioConfig, fechaInicio, ultimoDiaEsteMes);
     } else {
         //Tambien se crea para el siguiente mes 
         const ultimoDiaSiguienteMes = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth() + 2, 0)
-        await generarHorariosPorFecha(horarioConfig, fechaHoy, ultimoDiaSiguienteMes);
+        await generarHorariosPorFecha(horarioConfig, fechaInicio, ultimoDiaSiguienteMes);
     }
 };
 
@@ -55,7 +56,7 @@ const generarHorariosPorFecha = async (horarioConfig, fechaInicio, fechaFin) => 
     let nuevosHorarios = [];
     let fechaIter = new Date(fechaInicio.getTime());
     const createdAt = Date.now();
-    while (fecha <= fechaFin) {
+    while (fechaIter <= fechaFin) {
         if (diasSemana[fechaIter.getDay()]) {
             //procede a generar horarios para ese dia
             let minutoHorarioInicio = minutosIni;
