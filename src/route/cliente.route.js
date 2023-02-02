@@ -12,6 +12,7 @@ const {
   crearReserva,
   anularReserva,
   obtenerReservas,
+  obtenerAnuncios,
 } = require('../controller/cliente.controller');
 const multer = require('multer');
 const uuid4 = require('uuid4');
@@ -58,4 +59,7 @@ clienteRoute.route('/reserva')
 clienteRoute.route('/reserva/:idReserva')
   .delete(anularReserva);
 
+clienteRoute.route('/anuncios')
+  .get(obtenerAnuncios);
+  
 module.exports = clienteRoute;

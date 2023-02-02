@@ -490,7 +490,7 @@ const crearAnuncio = async (req, res) => {
     });
     if (validator.fails()) {
         eliminarFotoTmp(req.file);
-        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Faltan datos`);
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Verificar URL`);
         return;
     }
 
@@ -593,6 +593,7 @@ const eliminarAnuncio = async (req, res) => {
 const eliminarFotoTmp = async (file) => {
     if (!file) return;
     try {
+        let { filename, destination } = file;
         await fs.remove(destination + filename);
     } catch (error) {
         logger.error(error);

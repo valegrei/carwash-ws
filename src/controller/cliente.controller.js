@@ -591,9 +591,53 @@ const eliminarVehiculo = async (req, res) => {
     }
 }
 
+
+const obtenerAnuncios = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, obteniendo anuncios`);
+
+    const usuCli = await verificarCliente(req, res);
+    if (!usuCli) {
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
+
+    //Validamos
+    let validator = new Validator(req.query, {
+        lastSincro: 'required|date',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
+        return;
+    }
+
+    let lastSincro = req.query.lastSincro;
+
+    const Anuncio = require('../models/anuncio.model');
+    const anuncios = await Anuncio.findAll({
+        attribute: ['id','url','path','mostrar','estado'],
+        where: {
+            [Op.or]: [
+                { createdAt: { [Op.gt]: lastSincro } },
+                { updatedAt: { [Op.gt]: lastSincro } }
+            ]
+        }
+    })
+
+    if (!anuncios.length) {
+        //vacio
+        response(res, HttpStatus.NOT_FOUND, `No hay anuncios.`);
+        return;
+    } else {
+        response(res, HttpStatus.OK, `Anuncios encontrados`, { anuncios: anuncios });
+        return;
+    }
+};
+
 const eliminarFotoTmp = async (file) => {
     if (!file) return;
     try {
+        let { filename, destination } = file;
         await fs.remove(destination + filename);
     } catch (error) {
         logger.error(error);
@@ -627,4 +671,5 @@ module.exports = {
     crearReserva,
     anularReserva,
     obtenerReservas,
+    obtenerAnuncios,
 }
