@@ -55,7 +55,7 @@ const obtenerLocales = async (req, res) => {
             model: Usuario,
             attributes: ['id', 'razonSocial', 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2'],
             include: {
-                attributes: ['id', 'nombre', 'precio'],
+                attributes: ['id', 'nombre', 'precio', 'duracion'],
                 model: Servicio,
                 where: {
                     estado: true,
@@ -125,7 +125,7 @@ const obtenerHorarios = async (req, res) => {
         where: {
             idLocal: idLocal,
             fecha: fecha,
-            fechaHora: {[Op.gte] : fechaHora},
+            fechaHora: { [Op.gte]: fechaHora },
             estado: true,
             '$Reserva.idHorario$': null,
         },
@@ -155,6 +155,8 @@ const crearReserva = async (req, res) => {
         idCliente: 'required|integer',
         idVehiculo: 'required|integer',
         'servicios.*.id': 'required|integer',
+        'servicios.*.precio': 'required|numeric',
+        'servicios.*.duracion': 'required|integer',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `Faltan datos`);
@@ -177,6 +179,8 @@ const crearReserva = async (req, res) => {
             reservaServicios.push({
                 ReservaId: reserva.id,
                 ServicioId: e.id,
+                precio: e.precio,
+                duracion: e.duracion,
                 createdAt: Date.now(),
                 updatedAt: Date.now(),
             });
@@ -184,8 +188,10 @@ const crearReserva = async (req, res) => {
         await ReservaServicios.bulkCreate(reservaServicios);
         response(res, HttpStatus.OK, `Reserva guardada: ${reserva.id}`);
     } catch (error) {
-        logger.error(error)
-        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al guardar reserva`);
+        if (error.sqlState = 23000)
+            response(res, HttpStatus.INTERNAL_SERVER_ERROR, `El horario ya fue tomado. Elija otro.`);
+        else
+            response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al guardar reserva`);
     }
 };
 
@@ -208,7 +214,7 @@ const obtenerReservas = async (req, res) => {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `formato de fecha erroneo`);
         return;
     }
-    
+
     const whereHorario = {};
 
     if (!req.query.fecha) {
@@ -247,7 +253,10 @@ const obtenerReservas = async (req, res) => {
                 },
                 {
                     model: Servicio,
-                    attributes: ['id', 'nombre', 'precio']
+                    attributes: ['id', 'nombre'],
+                    through: {
+                        attributes: ['precio', 'duracion', 'estado']
+                    }
                 },
                 {
                     model: Vehiculo,
@@ -258,9 +267,9 @@ const obtenerReservas = async (req, res) => {
                 idCliente: usuCli.id,
                 estado: true,
             },
-            order:[
-                [{model: Horario, as: 'Horario'}, 'fecha', 'ASC'],
-                [{model: Horario, as: 'Horario'}, 'horaIni', 'ASC'],
+            order: [
+                [{ model: Horario, as: 'Horario' }, 'fecha', 'ASC'],
+                [{ model: Horario, as: 'Horario' }, 'horaIni', 'ASC'],
             ]
         })
 
@@ -360,7 +369,7 @@ const obtenerLocalesFavoritos = async (req, res) => {
             model: Usuario,
             attributes: ['id', 'razonSocial', 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2'],
             include: {
-                attributes: ['id', 'nombre', 'precio'],
+                attributes: ['id', 'nombre', 'precio', 'duracion'],
                 model: Servicio,
                 where: {
                     estado: true,
@@ -615,7 +624,7 @@ const obtenerAnuncios = async (req, res) => {
 
     const Anuncio = require('../models/anuncio.model');
     const anuncios = await Anuncio.findAll({
-        attribute: ['id','url','path','mostrar','estado'],
+        attribute: ['id', 'url', 'path', 'mostrar', 'estado'],
         where: {
             [Op.or]: [
                 { createdAt: { [Op.gt]: lastSincro } },

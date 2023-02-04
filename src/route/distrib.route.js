@@ -8,6 +8,7 @@ const {
     modificarHorarioConfig,
     eliminarHorarioConfig,
     obtenerReservas,
+    editarReserva,
 } = require('../controller/distrib.controller');
 
 const distribRoutes = express.Router();
@@ -27,5 +28,8 @@ distribRoutes.route('/horarioConfig/:idHorarioConfig')
 
 distribRoutes.route('/reserva')
     .get(obtenerReservas);
+
+distribRoutes.route('/reserva/:idReserva')
+    .put(editarReserva);
 
 module.exports = distribRoutes;

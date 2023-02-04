@@ -41,7 +41,7 @@ const obtenerServicios = async (req, res) => {
     const Servicio = require('../models/servicio.model');
 
     let servicios = await Servicio.findAll({
-        attributes: ['id', 'nombre', 'precio', 'estado', 'idDistrib'],
+        attributes: ['id', 'nombre', 'precio', 'duracion', 'estado', 'idDistrib'],
         where: {
             [Op.or]: [
                 { createdAt: { [Op.gt]: lastSincro } },
@@ -74,6 +74,7 @@ const agregarServicio = async (req, res) => {
     validator = new Validator(req.body, {
         'nombre': 'required|string',
         'precio': 'required|numeric',
+        'duracion': 'required|integer',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `datos erroneos`);
@@ -84,6 +85,7 @@ const agregarServicio = async (req, res) => {
         const data = {
             nombre: req.body.nombre,
             precio: req.body.precio,
+            duracion: req.body.duracion,
             idDistrib: idUsuario
         }
         const Servicio = require('../models/servicio.model');
@@ -117,6 +119,7 @@ const modificarServicio = async (req, res) => {
         'id': 'required|integer',
         'nombre': 'required|string',
         'precio': 'required|numeric',
+        'duracion': 'required|integer',
         'estado': 'required|boolean',
     });
     if (validator.fails()) {
@@ -129,6 +132,7 @@ const modificarServicio = async (req, res) => {
             nombre: req.body.nombre,
             precio: req.body.precio,
             estado: req.body.estado,
+            duracion: req.body.duracion,
         }
         const Servicio = require('../models/servicio.model');
         await Servicio.update(data, { where: { id: req.body.id, idDistrib: idUsuario } });
@@ -410,7 +414,10 @@ const obtenerReservas = async (req, res) => {
                 },
                 {
                     model: Servicio,
-                    attributes: ['id', 'nombre', 'precio']
+                    attributes: ['id', 'nombre'],
+                    through: {
+                        attributes: ['precio', 'duracion', 'estado']
+                    }
                 },
                 {
                     model: Vehiculo,
@@ -446,6 +453,61 @@ const obtenerReservas = async (req, res) => {
     }
 };
 
+
+const editarReserva = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, Creando reserva`);
+
+    const usuDis = await verificarDistrib(req, res);
+    if (!usuDis) {
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
+
+    //Validamos
+    let validator = new Validator(req.params, {
+        idReserva: 'required|integer',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
+        return;
+    }
+    validator = new Validator(req.body, {
+        'servicios.*.id': 'required|integer',
+        'servicios.*.ReservaServicios.estado': 'required|integer'
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Faltan datos`);
+        return;
+    }
+
+    const idReserva = req.params.idReserva;
+    let servicios = req.body.servicios;
+    let reservaServicios = [];
+    servicios.forEach(e => {
+        reservaServicios.push({
+            ReservaId: idReserva,
+            ServicioId: e.id,
+            estado: e.ReservaServicios.estado,
+        });
+    });
+
+    try {
+        const ReservaServicios = require('../models/reserva.servicios.model');
+        reservaServicios.forEach(async (e) => {
+            await ReservaServicios.update({ estado: e.estado }, {
+                where: {
+                    ReservaId: e.ReservaId,
+                    ServicioId: e.ServicioId,
+                }
+            });
+        });
+        response(res, HttpStatus.OK, `Reserva guardada`);
+    } catch (error) {
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al guardar reserva`);
+    }
+};
+
 module.exports = {
     obtenerServicios,
     agregarServicio,
@@ -455,4 +517,5 @@ module.exports = {
     modificarHorarioConfig,
     eliminarHorarioConfig,
     obtenerReservas,
+    editarReserva,
 };

@@ -20,6 +20,20 @@ ReservaServicios.init({
             key: 'id'
         }
     },
+    precio: {
+        type: DataTypes.DECIMAL(18,2),
+        allowNull: false,
+    },
+    duracion: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+    },
+    estado: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1,
+    },
 }, {
     sequelize: db.sequelize
 });

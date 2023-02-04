@@ -1,7 +1,6 @@
 const { DataTypes, Model } = require('sequelize');
 const db = require('.');
 const {Usuario} = require('./usuario.model');
-const Servicio = require('./servicio.model');
 const Horario = require('./horario.model');
 const Vehiculo = require('./vehiculo.model');
 
@@ -20,7 +19,13 @@ Reserva.init({
         allowNulls: false
     },
 }, {
-    sequelize: db.sequelize
+    sequelize: db.sequelize,
+    indexes:[
+        {
+            unique: true,
+            fields: ['idHorario'],
+        },
+    ],
 });
 Reserva.belongsTo(Horario, {foreignKey: 'idHorario'});
 Horario.hasOne(Reserva, {foreignKey: 'idHorario'});

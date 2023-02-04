@@ -19,11 +19,16 @@ Servicio.init({
         type: DataTypes.DECIMAL(18,2),
         allowNull: false,
     },
+    duracion: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+    },
     estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: 1,
         allowNulls: false
-    }
+    },
 }, {
     sequelize: db.sequelize
 });
