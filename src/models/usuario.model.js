@@ -117,6 +117,12 @@ Usuario.init({
             key: 'id'
         }
     },
+    acercaDe: {
+        type: DataTypes.STRING(200)
+    },
+    path: {
+        type: DataTypes.STRING(100)
+    },
 },{
     sequelize: db.sequelize
 });

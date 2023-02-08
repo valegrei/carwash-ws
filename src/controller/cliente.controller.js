@@ -46,6 +46,7 @@ const obtenerLocales = async (req, res) => {
     const { Usuario } = require('../models/usuario.model');
     const Servicio = require('../models/servicio.model');
     const Favorito = require('../models/favorito.model');
+    const HorarioConfig = require('../models/horario.config.model');
     const { latNE, longNE, latSW, longSW } = req.query;
 
     let locales = await Direccion.findAll({
@@ -53,7 +54,7 @@ const obtenerLocales = async (req, res) => {
             'direccion', 'latitud', 'longitud', 'estado', 'idUsuario'],
         include: [{
             model: Usuario,
-            attributes: ['id', 'razonSocial', 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2'],
+            attributes: ['id', 'razonSocial', 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2', 'acercaDe', 'path'],
             include: {
                 attributes: ['id', 'nombre', 'precio', 'duracion'],
                 model: Servicio,
@@ -68,6 +69,12 @@ const obtenerLocales = async (req, res) => {
         }, {
             model: Favorito,
             attributes: ['id', 'idCliente', 'idLocal', 'estado'],
+            where: { estado: true },
+            required: false,
+        }, {
+            model: HorarioConfig,
+            attributes: ['id', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo',
+                'horaIni', 'minIni', 'horaFin', 'minFin'],
             where: { estado: true },
             required: false,
         }],
@@ -319,15 +326,10 @@ const agregarFavorito = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, Agregando Favorito`);
 
-    const usuCli = await verificarCliente(req, res);
-    if (!usuCli) {
-        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
-        return;
-    }
-
+    const idCli = req.auth.data.idUsuario;
     //Validamos
     let validator = new Validator(req.body, {
-        idLocal: 'required|string',
+        idLocal: 'required|integer',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `Falta idLocal`);
@@ -336,12 +338,12 @@ const agregarFavorito = async (req, res) => {
 
     const data = {
         idLocal: req.body.idLocal,
-        idCliente: usuCli.id,
+        idCliente: idCli,
     };
     try {
         const Favorito = require('../models/favorito.model');
         let favorito = await Favorito.create(data);
-        response(res, HttpStatus.OK, `Favorito guardado: ${favorito.id}`);
+        response(res, HttpStatus.OK, `Favorito guardado: ${favorito.id}`, { favorito: favorito });
     } catch (error) {
         response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al guardar favorito`);
     }
@@ -352,14 +354,11 @@ const obtenerLocalesFavoritos = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, obteniendo locales favoritos`);
 
-    const usuCli = await verificarCliente(req, res);
-    if (!usuCli) {
-        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
-        return;
-    }
-
+    const idCli = req.auth.data.idUsuario;
     const Direccion = require('../models/direccion.model');
     const Favorito = require('../models/favorito.model');
+    const Servicio = require('../models/servicio.model');
+    const HorarioConfig = require('../models/horario.config.model');
     const { Usuario } = require('../models/usuario.model');
 
     let locales = await Direccion.findAll({
@@ -367,7 +366,7 @@ const obtenerLocalesFavoritos = async (req, res) => {
             'direccion', 'latitud', 'longitud', 'estado', 'idUsuario'],
         include: [{
             model: Usuario,
-            attributes: ['id', 'razonSocial', 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2'],
+            attributes: ['id', 'razonSocial', 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2', 'acercaDe', 'path'],
             include: {
                 attributes: ['id', 'nombre', 'precio', 'duracion'],
                 model: Servicio,
@@ -382,8 +381,14 @@ const obtenerLocalesFavoritos = async (req, res) => {
         }, {
             model: Favorito,
             attributes: ['id', 'idCliente', 'idLocal', 'estado'],
-            where: { estado: true, idCliente: usuCli.id },
+            where: { estado: true, idCliente: idCli },
             required: true,
+        }, {
+            model: HorarioConfig,
+            attributes: ['id', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo',
+                'horaIni', 'minIni', 'horaFin', 'minFin'],
+            where: { estado: true },
+            required: false,
         }],
         where: { estado: true },
     });
@@ -418,10 +423,9 @@ const eliminarFavorito = async (req, res) => {
     const idFavorito = req.params.idFavorito;
     try {
         const Favorito = require('../models/favorito.model');
-        await Favorito.update({ estado: false }, { where: { id: idFavorito } });
+        await Favorito.destroy({ where: { id: idFavorito } });
         response(res, HttpStatus.OK, `Favorito eliminado`);
     } catch (error) {
-        logger.error(error);
         response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al eliminar Favorito`);
     }
 }
@@ -649,7 +653,6 @@ const eliminarFotoTmp = async (file) => {
         let { filename, destination } = file;
         await fs.remove(destination + filename);
     } catch (error) {
-        logger.error(error);
     }
 }
 
@@ -662,7 +665,6 @@ const moverImagen = async (file) => {
         //mueve el archivo
         await fs.move(destination + filename, uploadFolder + filename);
     } catch (error) {
-        logger.error(error);
         return null;
     }
 };

@@ -347,13 +347,12 @@ const eliminarHorarioConfig = async (req, res) => {
     const idHorarioConfig = req.params.idHorarioConfig;
     try {
         const HorarioConfig = require('../models/horario.config.model');
-        await HorarioConfig.update({ estado: false }, {
+        await HorarioConfig.destroy({
             where: {
                 id: idHorarioConfig, idDistrib: idUsuario
             }
         });
         eliminarHorarios(idHorarioConfig);
-        //TODO anular tambien los horarios y reservas futuras generadas
         response(res, HttpStatus.OK, `Configuracion de Horario eliminada`);
     } catch (error) {
         logger.error(error);

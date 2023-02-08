@@ -1,10 +1,10 @@
 const { DataTypes, Model } = require('sequelize');
 const db = require('.');
-const {Usuario} = require('./usuario.model');
+const { Usuario } = require('./usuario.model');
 const Horario = require('./horario.model');
 const Direccion = require('./direccion.model');
 
-class HorarioConfig extends Model{}
+class HorarioConfig extends Model { }
 
 HorarioConfig.init({
     id: {
@@ -76,8 +76,9 @@ HorarioConfig.init({
 }, {
     sequelize: db.sequelize
 });
-HorarioConfig.belongsTo(Usuario, {as: 'Distrib', foreignKey: 'idDistrib'});
-HorarioConfig.belongsTo(Direccion, {as: 'Local', foreignKey: 'idLocal'});
-HorarioConfig.hasMany(Horario, {as: 'Horario', foreignKey: 'idHorarioConfig'});
+HorarioConfig.belongsTo(Usuario, { as: 'Distrib', foreignKey: 'idDistrib' });
+HorarioConfig.belongsTo(Direccion, { as: 'Local', foreignKey: 'idLocal' });
+Direccion.hasOne(HorarioConfig, { foreignKey: 'idLocal' });
+HorarioConfig.hasMany(Horario, { as: 'Horario', foreignKey: 'idHorarioConfig' });
 
 module.exports = HorarioConfig;

@@ -1,32 +1,35 @@
-const {response} = require('../domain/response');
+const { response } = require('../domain/response');
 const logger = require('../util/logger');
 const HttpStatus = require('../util/http.status');
 const Validator = require('validatorjs');
-const {generarCodigo, sha256} = require('../util/utils');
+const { sha256 } = require('../util/utils');
 const { Op } = require('sequelize');
+const fs = require('fs-extra');
+const uploadFolder = 'uploads/images/banner/';
+const pathStr = '/files/images/banner/';
 
 /**
  * Obtiene datos del mismo usuario que lo solicita
  */
 const getUsuario = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, obteniendo usuario`);
-    
+
     let idUsuario = req.auth.data.idUsuario;
 
-    const {Usuario} = require('../models/usuario.model');
+    const { Usuario } = require('../models/usuario.model');
 
     let usuario = await Usuario.findOne({
-        where:{id: idUsuario, estado: 1}
+        where: { id: idUsuario, estado: 1 }
     });
 
-    if(!usuario){
+    if (!usuario) {
         //vacio
-        response(res,HttpStatus.NOT_FOUND,`Usuario no encontrado.`);
+        response(res, HttpStatus.NOT_FOUND, `Usuario no encontrado.`);
         return;
-    }else{
+    } else {
         usuario.clave = null;
 
-        response(res,HttpStatus.OK,`Usuario encontrado`,{usuario: usuario});
+        response(res, HttpStatus.OK, `Usuario encontrado`, { usuario: usuario });
         return;
     }
 };
@@ -36,7 +39,7 @@ const getUsuario = async (req, res) => {
  */
 const updateUsuario = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, actualizando usuario`);
-    
+
     let idUsuario = req.auth.data.idUsuario;
 
     //Validamos datos ingresados
@@ -49,9 +52,12 @@ const updateUsuario = async (req, res) => {
         nroCel1: 'string',
         nroCel2: 'string',
         idTipoDocumento: 'required|integer',
+        acercaDe: 'string',
+        borrarFoto: 'boolean',
     });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
+    if (validator.fails()) {
+        eliminarFotoTmp(req.file);
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Datos no válidos o incompletos`);
         return;
     }
 
@@ -64,25 +70,39 @@ const updateUsuario = async (req, res) => {
         nroDocumento: req.body.nroDocumento,
         nroCel1: req.body.nroCel1,
         nroCel2: req.body.nroCel2,
-        idTipoDocumento: req.body.idTipoDocumento
+        idTipoDocumento: req.body.idTipoDocumento,
+        acercaDe: req.body.acercaDe
     };
+    if (req.file != null) {
+        let { filename } = req.file;
+        data.path = pathStr + filename;
+    }
+    if (req.body.borrarFoto != null && req.body.borrarFoto === 'true') {
+        data.path = null;
+    }
 
-    const {Usuario} = require('../models/usuario.model');
-    await Usuario.update(data,{where:{id: idUsuario, estado: 1}});
+    try {
+        const { Usuario } = require('../models/usuario.model');
+        await Usuario.update(data, { where: { id: idUsuario, estado: 1 } });
+        await moverImagen(req.file);
 
-    //obtiene usuario actualizado
-    const usuario = await Usuario.findOne({
-        where:{id: idUsuario, estado: 1}
-    });
+        //obtiene usuario actualizado
+        const usuario = await Usuario.findOne({
+            where: { id: idUsuario, estado: 1 }
+        });
 
-    if(!usuario){
-        //vacio
-        response(res,HttpStatus.NOT_FOUND,`Usuario no encontrado.`);
-        return;
-    }else{
-        usuario.clave = null;
-        response(res,HttpStatus.OK,`Usuario actualizado`,{usuario: usuario});
-        return;
+        if (!usuario) {
+            //vacio
+            response(res, HttpStatus.NOT_FOUND, `Usuario no encontrado.`);
+            return;
+        } else {
+            usuario.clave = null;
+            response(res, HttpStatus.OK, `Usuario actualizado`, { usuario: usuario });
+            return;
+        }
+    } catch (error) {
+        logger.error(error);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al guardar`);
     }
 };
 /**
@@ -90,7 +110,7 @@ const updateUsuario = async (req, res) => {
  */
 const cambiarPassword = async (req, res) => {
     logger.info(`${req.method} ${req.originalUrl}, cambiando clave de usuario`);
-    
+
     let idUsuario = req.auth.data.idUsuario;
 
     //Validamos datos ingresados
@@ -98,35 +118,35 @@ const cambiarPassword = async (req, res) => {
         claveAnterior: 'required|string',
         claveNueva: 'required|string',
     });
-    if(validator.fails()){
-        response(res,HttpStatus.UNPROCESABLE_ENTITY,`Datos no válidos o incompletos.`);
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Datos no válidos o incompletos.`);
         return;
     }
-    try{
-        const {Usuario} = require('../models/usuario.model');
+    try {
+        const { Usuario } = require('../models/usuario.model');
         const usuario = await Usuario.findOne({
-            where:{id: idUsuario, estado: 1}
+            where: { id: idUsuario, estado: 1 }
         });
 
-        const {claveAnterior, claveNueva} = req.body;
+        const { claveAnterior, claveNueva } = req.body;
 
-        if(usuario){
-            if(usuario.clave == sha256(claveAnterior)){
+        if (usuario) {
+            if (usuario.clave == sha256(claveAnterior)) {
                 //procede a actualizar
                 usuario.clave = sha256(claveNueva);
                 await usuario.save();
-                response(res,HttpStatus.OK,`Usuario actualizado`);
-            }else{
-                response(res,HttpStatus.UNPROCESABLE_ENTITY,`Clave anterior incorrecta.`);
+                response(res, HttpStatus.OK, `Usuario actualizado`);
+            } else {
+                response(res, HttpStatus.UNPROCESABLE_ENTITY, `Clave anterior incorrecta.`);
             }
-        }else{
-            response(res,HttpStatus.NOT_FOUND,`Usuario no encontrado.`);
+        } else {
+            response(res, HttpStatus.NOT_FOUND, `Usuario no encontrado.`);
         }
-    }catch(error){
+    } catch (error) {
         logger.error(error);
-        response(res,HttpStatus.INTERNAL_SERVER_ERROR,`Error al cambiar clave.`);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al cambiar clave.`);
     }
-    
+
 };
 
 
@@ -149,7 +169,7 @@ const obtenerDirecciones = async (req, res) => {
 
     let direcciones = await Direccion.findAll({
         attributes: ['id', 'departamento', 'provincia', 'distrito', 'ubigeo',
-            'direccion', 'latitud', 'longitud', 'estado', 'tipo','idUsuario'],
+            'direccion', 'latitud', 'longitud', 'estado', 'tipo', 'idUsuario'],
         where: {
             [Op.or]: [
                 { createdAt: { [Op.gt]: lastSincro } },
@@ -292,7 +312,7 @@ const eliminarDireccion = async (req, res) => {
             }
         });
         // Tambien se anulan horarios relacionados
-        await HorarioConfig.update({estado: false}, {
+        await HorarioConfig.update({ estado: false }, {
             where: {
                 idLocal: idDireccion,
                 estado: true
@@ -306,9 +326,33 @@ const eliminarDireccion = async (req, res) => {
     }
 }
 
+const eliminarFotoTmp = async (file) => {
+    if (!file) return;
+    try {
+        let { filename, destination } = file;
+        await fs.remove(destination + filename);
+    } catch (error) {
+        logger.error(error);
+    }
+}
+
+const moverImagen = async (file) => {
+    if (!file) return;
+
+    let { filename, destination } = file;
+
+    try {
+        //mueve el archivo
+        await fs.move(destination + filename, uploadFolder + filename);
+    } catch (error) {
+        logger.error(error);
+        return null;
+    }
+};
+
 module.exports = {
-    getUsuario, 
-    updateUsuario, 
+    getUsuario,
+    updateUsuario,
     cambiarPassword,
     obtenerDirecciones,
     agregarDireccion,
