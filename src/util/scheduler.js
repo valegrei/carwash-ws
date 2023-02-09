@@ -49,7 +49,7 @@ const generarParaSiguienteMes = async (horarioConfig) => {
 
 const generarHorariosPorFecha = async (horarioConfig, fechaInicio, fechaFin) => {
     const { domingo, lunes, martes, miercoles, jueves, viernes, sabado,
-        horaIni, minIni, horaFin, minFin, intervalo, idDistrib, idLocal, id } = horarioConfig.dataValues;
+        horaIni, minIni, horaFin, minFin, intervalo, idDistrib, idLocal, id, nroAtenciones } = horarioConfig.dataValues;
     const diasSemana = [domingo, lunes, martes, miercoles, jueves, viernes, sabado];
     const minutosIni = horaIni * 60 + minIni;
     const minutosFin = horaFin * 60 + minFin;
@@ -66,18 +66,23 @@ const generarHorariosPorFecha = async (horarioConfig, fechaInicio, fechaFin) => 
                 let horaIni = minToTime(minutoHorarioInicio);
                 let horaFin = minToTime(minutoHorarioFin);
                 let fechaHora = `${fecha} ${horaIni}`;
-                nuevosHorarios.push({
-                    fechaHora: fechaHora,
-                    fecha: fecha,
-                    horaIni: horaIni,
-                    horaFin: horaFin,
-                    estado: true,
-                    idDistrib: idDistrib,
-                    idLocal: idLocal,
-                    idHorarioConfig: id,
-                    createdAt: createdAt,
-                    updatedAt: createdAt,
-                });
+                let nro = 0;
+                while (nro < nroAtenciones) {
+                    nuevosHorarios.push({
+                        nro: nro,
+                        fechaHora: fechaHora,
+                        fecha: fecha,
+                        horaIni: horaIni,
+                        horaFin: horaFin,
+                        estado: true,
+                        idDistrib: idDistrib,
+                        idLocal: idLocal,
+                        idHorarioConfig: id,
+                        createdAt: createdAt,
+                        updatedAt: createdAt,
+                    });
+                    nro++;
+                }
                 minutoHorarioInicio = minutoHorarioFin;
                 minutoHorarioFin = minutoHorarioFin + intervalo;
             }

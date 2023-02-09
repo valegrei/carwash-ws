@@ -12,6 +12,10 @@ Horario.init({
         primaryKey: true,
         autoIncrement: true
     },
+    nro:{
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    },
     fechaHora: {
         type: DataTypes.DATE,
         allowNull: false,
@@ -38,7 +42,7 @@ Horario.init({
     indexes: [
         {
             unique: true,
-            fields: ['fecha', 'horaIni', 'horaFin', 'idHorarioConfig']
+            fields: ['nro','fecha', 'horaIni', 'horaFin', 'idHorarioConfig']
         }
     ]
 });

@@ -172,7 +172,7 @@ const obtenerHorariosConfig = async (req, res) => {
     let horarioConfigs = await HorarioConfig.findAll({
         attributes: ['id', 'lunes', 'martes', 'miercoles', 'jueves',
             'viernes', 'sabado', 'domingo', 'horaIni', 'minIni', 'horaFin',
-            'minFin', 'intervalo', 'estado', 'idDistrib', 'idLocal'],
+            'minFin', 'nroAtenciones', 'estado', 'idDistrib', 'idLocal'],
         where: {
             [Op.or]: [
                 { createdAt: { [Op.gt]: lastSincro } },
@@ -215,7 +215,7 @@ const agregarHorarioConfig = async (req, res) => {
         'minIni': 'required|integer',
         'horaFin': 'required|integer',
         'minFin': 'required|integer',
-        'intervalo': 'required|integer',
+        'nroAtenciones': 'required|integer',
         'idLocal': 'required|integer',
     });
     if (validator.fails()) {
@@ -236,8 +236,8 @@ const agregarHorarioConfig = async (req, res) => {
             minIni: req.body.minIni,
             horaFin: req.body.horaFin,
             minFin: req.body.minFin,
-            intervalo: req.body.intervalo,
             idLocal: req.body.idLocal,
+            nroAtenciones: req.body.nroAtenciones,
             idDistrib: idUsuario
         }
 
@@ -288,7 +288,7 @@ const modificarHorarioConfig = async (req, res) => {
         'minIni': 'required|integer',
         'horaFin': 'required|integer',
         'minFin': 'required|integer',
-        'intervalo': 'required|integer',
+        'nroAtenciones': 'required|integer',
         'idLocal': 'required|integer',
     });
     if (validator.fails()) {
@@ -310,7 +310,7 @@ const modificarHorarioConfig = async (req, res) => {
             minIni: req.body.minIni,
             horaFin: req.body.horaFin,
             minFin: req.body.minFin,
-            intervalo: req.body.intervalo,
+            nroAtenciones: req.body.nroAtenciones,
             idLocal: req.body.idLocal,
         }
         const HorarioConfig = require('../models/horario.config.model');
@@ -391,7 +391,6 @@ const obtenerReservas = async (req, res) => {
     }
     whereHorario.idDistrib = usuDis.id;
 
-    const Horario = require('../models/horario.model');
     const Reserva = require('../models/reserva.model');
     const Servicio = require('../models/servicio.model');
     const Vehiculo = require('../models/vehiculo.model');
@@ -399,18 +398,8 @@ const obtenerReservas = async (req, res) => {
     const Direccion = require('../models/direccion.model');
     try {
         const reservas = await Reserva.findAll({
-            attributes: ['id'],
+            attributes: ['id', 'fecha', 'horaIni', 'duracionTotal'],
             include: [
-                {
-                    model: Horario,
-                    attributes: ['id', 'fecha', 'horaIni', 'horaFin'],
-                    include: {
-                        model: Direccion,
-                        as: 'Local',
-                        attributes: ['id', 'direccion'],
-                    },
-                    where: whereHorario,
-                },
                 {
                     model: Servicio,
                     attributes: ['id', 'nombre'],
@@ -426,14 +415,19 @@ const obtenerReservas = async (req, res) => {
                     as: "cliente",
                     attributes: ['id', 'correo', 'nombres', 'apellidoPaterno', 'apellidoMaterno'
                         , 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2']
-                }
+                }, {
+                    model: Direccion,
+                    as: 'Local',
+                    attributes: ['id', 'direccion'],
+                },
             ],
             where: {
                 estado: true,
+                fecha: whereHorario.fecha,
             },
             order: [
-                [{ model: Horario, as: 'Horario' }, 'fecha', 'ASC'],
-                [{ model: Horario, as: 'Horario' }, 'horaIni', 'ASC'],
+                ['fecha', 'ASC'],
+                ['fechaHora', 'ASC'],
             ]
         })
 

@@ -74,7 +74,7 @@ const obtenerLocales = async (req, res) => {
         }, {
             model: HorarioConfig,
             attributes: ['id', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo',
-                'horaIni', 'minIni', 'horaFin', 'minFin'],
+                'horaIni', 'minIni', 'horaFin', 'minFin', 'nroAtenciones'],
             where: { estado: true },
             required: false,
         }],
@@ -119,22 +119,16 @@ const obtenerHorarios = async (req, res) => {
     }
 
     const Horario = require('../models/horario.model');
-    const Reserva = require('../models/reserva.model');
     const { idLocal, fecha, fechaHora } = req.query;
 
     let horarios = await Horario.findAll({
-        attributes: ['id', 'fecha', 'horaIni', 'horaFin'],
-        include: {
-            model: Reserva,
-            attributes: ['id'],
-            required: false,
-        },
+        attributes: ['id', 'nro', 'fecha', 'horaIni', 'horaFin'],
         where: {
             idLocal: idLocal,
             fecha: fecha,
             fechaHora: { [Op.gte]: fechaHora },
             estado: true,
-            '$Reserva.idHorario$': null,
+            idReserva: null,
         },
     });
 
@@ -158,9 +152,15 @@ const crearReserva = async (req, res) => {
 
     //Validamos
     let validator = new Validator(req.body, {
-        idHorario: 'required|integer',
+        idHorarios: 'required|array',
         idCliente: 'required|integer',
         idVehiculo: 'required|integer',
+        idDistrib: 'required|integer',
+        idLocal: 'required|integer',
+        fecha: 'required|date',
+        horaIni: 'required|string',
+        fechaHora: 'required|date',
+        duracionTotal: 'required|integer',
         'servicios.*.id': 'required|integer',
         'servicios.*.precio': 'required|numeric',
         'servicios.*.duracion': 'required|integer',
@@ -170,18 +170,28 @@ const crearReserva = async (req, res) => {
         return;
     }
 
-    const dataReserva = {
-        idHorario: req.body.idHorario,
+    const dataReserva = { //Horario de Inicio
         idCliente: req.body.idCliente,
         idVehiculo: req.body.idVehiculo,
+        idDistrib: req.body.idDistrib,
+        idLocal: req.body.idLocal,
+        fecha: req.body.fecha,
+        horaIni: req.body.horaIni,
+        fechaHora: req.body.fechaHora,
+        duracionTotal: req.body.duracionTotal,
     };
-    let servicios = req.body.servicios;
+    const servicios = req.body.servicios;
+    const idHorarios = req.body.idHorarios;
+
+    const db = require('../models');
+    const Reserva = require('../models/reserva.model');
+    const Horario = require('../models/horario.model');
+    const ReservaServicios = require('../models/reserva.servicios.model');
+    const t = await db.sequelize.transaction();
 
     try {
-        const Reserva = require('../models/reserva.model');
-        const ReservaServicios = require('../models/reserva.servicios.model');
-        let reserva = await Reserva.create(dataReserva);
-        let reservaServicios = [];
+        const reserva = await Reserva.create(dataReserva);
+        const reservaServicios = [];
         servicios.forEach(e => {
             reservaServicios.push({
                 ReservaId: reserva.id,
@@ -193,8 +203,32 @@ const crearReserva = async (req, res) => {
             });
         });
         await ReservaServicios.bulkCreate(reservaServicios);
+        //Verifica si esos horarios ya fueron tomados por otra reserva
+        const cantHorariosOcupados = await Horario.count({
+            where: {
+                id: { [Op.in]: idHorarios },
+                idReserva: { [Op.ne]: null }
+            }
+        });
+        if (cantHorariosOcupados == 0) {
+            //procede a guardar los horarios de la reserva
+            await Horario.update({
+                idReserva: reserva.id
+            }, {
+                where: {
+                    id: { [Op.in]: idHorarios }
+                }
+            })
+        } else {
+            //sino desase todo
+            logger.info(`Cantidad de conflictos: ${cantHorariosOcupados}`)
+            await t.rollback();
+        }
+        await t.commit();
         response(res, HttpStatus.OK, `Reserva guardada: ${reserva.id}`);
     } catch (error) {
+        logger.error(error)
+        await t.rollback()
         if (error.sqlState = 23000)
             response(res, HttpStatus.INTERNAL_SERVER_ERROR, `El horario ya fue tomado. Elija otro.`);
         else
@@ -231,7 +265,6 @@ const obtenerReservas = async (req, res) => {
         whereHorario.fecha = req.query.fecha;
     }
 
-    const Horario = require('../models/horario.model');
     const Reserva = require('../models/reserva.model');
     const Servicio = require('../models/servicio.model');
     const Vehiculo = require('../models/vehiculo.model');
@@ -239,25 +272,8 @@ const obtenerReservas = async (req, res) => {
     const Direccion = require('../models/direccion.model');
     try {
         const reservas = await Reserva.findAll({
-            attributes: ['id'],
+            attributes: ['id', 'fecha', 'horaIni', 'duracionTotal'],
             include: [
-                {
-                    model: Horario,
-                    attributes: ['id', 'fecha', 'horaIni', 'horaFin'],
-                    include: [
-                        {
-                            model: Direccion,
-                            as: 'Local',
-                            attributes: ['id', 'direccion'],
-                        },
-                        {
-                            model: Usuario,
-                            as: 'Distrib',
-                            attributes: ['id', 'razonSocial'],
-                        },
-                    ],
-                    where: whereHorario,
-                },
                 {
                     model: Servicio,
                     attributes: ['id', 'nombre'],
@@ -269,14 +285,25 @@ const obtenerReservas = async (req, res) => {
                     model: Vehiculo,
                     attributes: ['id', 'marca', 'modelo', 'year', 'placa']
                 },
+                {
+                    model: Direccion,
+                    as: 'Local',
+                    attributes: ['id', 'direccion'],
+                },
+                {
+                    model: Usuario,
+                    as: 'distrib',
+                    attributes: ['id', 'razonSocial'],
+                },
             ],
             where: {
                 idCliente: usuCli.id,
                 estado: true,
+                fecha: whereHorario.fecha,
             },
             order: [
-                [{ model: Horario, as: 'Horario' }, 'fecha', 'ASC'],
-                [{ model: Horario, as: 'Horario' }, 'horaIni', 'ASC'],
+                ['fecha', 'ASC'],
+                ['fechaHora', 'ASC'],
             ]
         })
 
@@ -386,7 +413,7 @@ const obtenerLocalesFavoritos = async (req, res) => {
         }, {
             model: HorarioConfig,
             attributes: ['id', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo',
-                'horaIni', 'minIni', 'horaFin', 'minFin'],
+                'horaIni', 'minIni', 'horaFin', 'minFin', 'nroAtenciones'],
             where: { estado: true },
             required: false,
         }],

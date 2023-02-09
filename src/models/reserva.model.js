@@ -3,6 +3,7 @@ const db = require('.');
 const {Usuario} = require('./usuario.model');
 const Horario = require('./horario.model');
 const Vehiculo = require('./vehiculo.model');
+const Direccion = require('./direccion.model');
 
 class Reserva extends Model{}
 
@@ -13,6 +14,22 @@ Reserva.init({
         primaryKey: true,
         autoIncrement: true
     },
+    fecha: {
+        type: DataTypes.DATEONLY,
+        allowNull: false,
+    },
+    fechaHora: {
+        type: DataTypes.DATE,
+        allowNull: false,
+    },
+    horaIni: {
+        type: DataTypes.TIME,
+        allowNull: false,
+    },
+    duracionTotal: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    },
     estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: 1,
@@ -20,16 +37,12 @@ Reserva.init({
     },
 }, {
     sequelize: db.sequelize,
-    indexes:[
-        {
-            unique: true,
-            fields: ['idHorario'],
-        },
-    ],
 });
-Reserva.belongsTo(Horario, {foreignKey: 'idHorario'});
-Horario.hasOne(Reserva, {foreignKey: 'idHorario'});
+Reserva.hasMany(Horario, {foreignKey: 'idReserva'});
+Horario.belongsTo(Reserva, {foreignKey: 'idReserva'});
 Reserva.belongsTo(Usuario, {as: 'cliente', foreignKey: 'idCliente'});
 Reserva.belongsTo(Vehiculo, {foreignKey: 'idVehiculo'});
+Reserva.belongsTo(Usuario, {as: 'distrib', foreignKey: 'idDistrib'});
+Reserva.belongsTo(Direccion, {as: 'Local', foreignKey: 'idLocal'});
 
 module.exports = Reserva;

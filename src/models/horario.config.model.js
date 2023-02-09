@@ -67,6 +67,12 @@ HorarioConfig.init({
     intervalo: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        defaultValue: 30,
+    },
+    nroAtenciones:{
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1,
     },
     estado: {
         type: DataTypes.BOOLEAN,
