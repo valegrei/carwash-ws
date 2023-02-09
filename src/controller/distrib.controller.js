@@ -423,6 +423,7 @@ const obtenerReservas = async (req, res) => {
             ],
             where: {
                 estado: true,
+                idDistrib: usuDis.id,
                 fecha: whereHorario.fecha,
             },
             order: [
