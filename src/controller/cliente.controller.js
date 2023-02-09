@@ -76,7 +76,7 @@ const obtenerLocales = async (req, res) => {
             attributes: ['id', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo',
                 'horaIni', 'minIni', 'horaFin', 'minFin', 'nroAtenciones'],
             where: { estado: true },
-            required: false,
+            required: true,
         }],
         where: {
             [Op.and]: [
@@ -415,7 +415,7 @@ const obtenerLocalesFavoritos = async (req, res) => {
             attributes: ['id', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo',
                 'horaIni', 'minIni', 'horaFin', 'minFin', 'nroAtenciones'],
             where: { estado: true },
-            required: false,
+            required: true,
         }],
         where: { estado: true },
     });
