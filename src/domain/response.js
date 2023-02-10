@@ -1,6 +1,8 @@
+const {formatFechaDB} = require('../util/utils');
+
 class Response {
     constructor(statusCode, httpStatus, message, data){
-        this.timeStamp = new Date().toISOString();
+        this.timeStamp = formatFechaDB(new Date()) //toISOString();
         this.statusCode = statusCode;
         this.httpStatus = httpStatus;
         this.message = message;

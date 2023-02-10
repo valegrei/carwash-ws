@@ -157,7 +157,7 @@ const obtenerDirecciones = async (req, res) => {
     let idUsuario = req.auth.data.idUsuario;
 
     validator = new Validator(req.query, {
-        lastSincro: 'required|date',
+        lastSincro: 'date',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
@@ -165,18 +165,27 @@ const obtenerDirecciones = async (req, res) => {
     }
 
     let lastSincro = req.query.lastSincro;
+    var where = {};
+    if (lastSincro != null) {
+        where = {
+            idUsuario: idUsuario,
+            [Op.or]: [
+                { createdAt: { [Op.gt]: lastSincro } },
+                { updatedAt: { [Op.gt]: lastSincro } }
+            ]
+        }
+    } else {
+        where = {
+            idUsuario: idUsuario,
+            estado: true
+        }
+    }
     const Direccion = require('../models/direccion.model');
 
     let direcciones = await Direccion.findAll({
         attributes: ['id', 'departamento', 'provincia', 'distrito', 'ubigeo',
             'direccion', 'latitud', 'longitud', 'estado', 'tipo', 'idUsuario'],
-        where: {
-            [Op.or]: [
-                { createdAt: { [Op.gt]: lastSincro } },
-                { updatedAt: { [Op.gt]: lastSincro } }
-            ],
-            idUsuario: idUsuario,
-        }
+        where: where
     });
 
     if (!direcciones.length) {

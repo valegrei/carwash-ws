@@ -268,11 +268,12 @@ const obtenerReservas = async (req, res) => {
     const Reserva = require('../models/reserva.model');
     const Servicio = require('../models/servicio.model');
     const Vehiculo = require('../models/vehiculo.model');
+    const Favorito = require('../models/favorito.model');
     const { Usuario } = require('../models/usuario.model');
     const Direccion = require('../models/direccion.model');
     try {
         const reservas = await Reserva.findAll({
-            attributes: ['id', 'fecha', 'horaIni', 'duracionTotal'],
+            attributes: ['id', 'fecha', 'horaIni', 'duracionTotal','estadoAtencion'],
             include: [
                 {
                     model: Servicio,
@@ -289,6 +290,14 @@ const obtenerReservas = async (req, res) => {
                     model: Direccion,
                     as: 'Local',
                     attributes: ['id', 'direccion'],
+                    include: [
+                        {
+                            model: Favorito,
+                            attributes: ['id', 'idCliente', 'idLocal', 'estado'],
+                            where: { estado: true },
+                            required: false,
+                        }, 
+                    ]
                 },
                 {
                     model: Usuario,
@@ -469,7 +478,7 @@ const obtenerVehiculos = async (req, res) => {
 
     //Validamos
     let validator = new Validator(req.query, {
-        lastSincro: 'required|date',
+        lastSincro: 'date',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
@@ -477,16 +486,24 @@ const obtenerVehiculos = async (req, res) => {
     }
 
     let lastSincro = req.query.lastSincro;
-
-    const Vehiculo = require('../models/vehiculo.model');
-    const vehiculos = await Vehiculo.findAll({
-        where: {
+    var where = {};
+    if (lastSincro != null) {
+        where = {
             idCliente: usuCli.id,
             [Op.or]: [
                 { createdAt: { [Op.gt]: lastSincro } },
                 { updatedAt: { [Op.gt]: lastSincro } }
             ]
         }
+    } else {
+        where = {
+            idCliente: usuCli.id,
+            estado: true
+        }
+    }
+    const Vehiculo = require('../models/vehiculo.model');
+    const vehiculos = await Vehiculo.findAll({
+        where: where
     })
 
     if (!vehiculos.length) {
@@ -644,7 +661,7 @@ const obtenerAnuncios = async (req, res) => {
 
     //Validamos
     let validator = new Validator(req.query, {
-        lastSincro: 'required|date',
+        lastSincro: 'date',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
@@ -652,16 +669,24 @@ const obtenerAnuncios = async (req, res) => {
     }
 
     let lastSincro = req.query.lastSincro;
-
-    const Anuncio = require('../models/anuncio.model');
-    const anuncios = await Anuncio.findAll({
-        attribute: ['id', 'url', 'path', 'mostrar', 'estado'],
-        where: {
+    var where = {};
+    if (lastSincro != null) {
+        where = {
             [Op.or]: [
                 { createdAt: { [Op.gt]: lastSincro } },
                 { updatedAt: { [Op.gt]: lastSincro } }
             ]
         }
+    } else {
+        where = {
+            estado: true
+        }
+    }
+
+    const Anuncio = require('../models/anuncio.model');
+    const anuncios = await Anuncio.findAll({
+        attribute: ['id', 'url', 'path', 'mostrar', 'estado'],
+        where: where
     })
 
     if (!anuncios.length) {

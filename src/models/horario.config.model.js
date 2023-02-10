@@ -84,7 +84,7 @@ HorarioConfig.init({
 });
 HorarioConfig.belongsTo(Usuario, { as: 'Distrib', foreignKey: 'idDistrib' });
 HorarioConfig.belongsTo(Direccion, { as: 'Local', foreignKey: 'idLocal' });
-Direccion.hasOne(HorarioConfig, { foreignKey: 'idLocal' });
+Direccion.hasMany(HorarioConfig, { foreignKey: 'idLocal' });
 HorarioConfig.hasMany(Horario, { as: 'Horario', foreignKey: 'idHorarioConfig' });
 
 module.exports = HorarioConfig;

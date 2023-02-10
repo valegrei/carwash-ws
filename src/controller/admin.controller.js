@@ -44,7 +44,7 @@ const getParametros = async (req, res) => {
 
     //Validamos
     let validator = new Validator(req.query, {
-        lastSincro: 'required|date',
+        lastSincro: 'date',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
@@ -52,16 +52,24 @@ const getParametros = async (req, res) => {
     }
 
     let lastSincro = req.query.lastSincro;
-    const { Parametro } = require('../models/parametro.model');
-
-    let parametros = await Parametro.findAll({
-        attributes: ['clave', 'valor', 'idTipo'],
-        where: {
+    var where = {};
+    if (lastSincro != null) {
+        where = {
             [Op.or]: [
                 { createdAt: { [Op.gt]: lastSincro } },
                 { updatedAt: { [Op.gt]: lastSincro } }
             ]
         }
+    } else {
+        where = {
+            estado: true
+        }
+    }
+    const { Parametro } = require('../models/parametro.model');
+
+    let parametros = await Parametro.findAll({
+        attributes: ['clave', 'valor', 'idTipo'],
+        where: where
     });
 
     if (!parametros.length) {
@@ -251,7 +259,7 @@ const getUsuarios = async (req, res) => {
 
     //Validamos
     let validator = new Validator(req.query, {
-        lastSincro: 'required|date',
+        lastSincro: 'date',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
@@ -259,6 +267,21 @@ const getUsuarios = async (req, res) => {
     }
 
     let lastSincro = req.query.lastSincro;
+    var where = {};
+    if (lastSincro != null) {
+        where = {
+            [Op.or]: [
+                { createdAt: { [Op.gt]: lastSincro } },
+                { updatedAt: { [Op.gt]: lastSincro } }
+            ]
+        }
+    } else {
+        where = {
+            estado: {
+                [Op.gt] : 0
+            }
+        }
+    }
     const { Usuario } = require('../models/usuario.model');
 
     let usuarios = await Usuario.findAll({
@@ -267,12 +290,7 @@ const getUsuarios = async (req, res) => {
             'razonSocial', 'nroDocumento', 'nroCel1', 'nroCel2', 'estado', 'idTipoUsuario',
             'idTipoDocumento', 'createdAt', 'updatedAt'
         ],
-        where: {
-            [Op.or]: [
-                { createdAt: { [Op.gt]: lastSincro } },
-                { updatedAt: { [Op.gt]: lastSincro } }
-            ]
-        }
+        where: where
     });
 
     if (!usuarios.length) {
@@ -438,7 +456,7 @@ const obtenerAnuncios = async (req, res) => {
 
     //Validamos
     let validator = new Validator(req.query, {
-        lastSincro: 'required|date',
+        lastSincro: 'date',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
@@ -446,15 +464,22 @@ const obtenerAnuncios = async (req, res) => {
     }
 
     let lastSincro = req.query.lastSincro;
-
-    const Anuncio = require('../models/anuncio.model');
-    const anuncios = await Anuncio.findAll({
-        where: {
+    var where = {};
+    if (lastSincro != null) {
+        where = {
             [Op.or]: [
                 { createdAt: { [Op.gt]: lastSincro } },
                 { updatedAt: { [Op.gt]: lastSincro } }
             ]
         }
+    } else {
+        where = {
+            estado: true
+        }
+    }
+    const Anuncio = require('../models/anuncio.model');
+    const anuncios = await Anuncio.findAll({
+        where: where
     })
 
     if (!anuncios.length) {

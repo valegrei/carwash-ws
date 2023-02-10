@@ -30,6 +30,11 @@ Reserva.init({
         type: DataTypes.INTEGER,
         allowNull: false,
     },
+    estadoAtencion: {
+        type: DataTypes.TINYINT,
+        defaultValue: 1,
+        allowNulls: false
+    },
     estado: {
         type: DataTypes.BOOLEAN,
         defaultValue: 1,

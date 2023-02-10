@@ -30,7 +30,7 @@ const obtenerServicios = async (req, res) => {
     let idUsuario = req.auth.data.idUsuario;
 
     validator = new Validator(req.query, {
-        lastSincro: 'required|date',
+        lastSincro: 'date',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
@@ -38,17 +38,26 @@ const obtenerServicios = async (req, res) => {
     }
 
     let lastSincro = req.query.lastSincro;
+    var where = {};
+    if (lastSincro != null) {
+        where = {
+            idDistrib: idUsuario,
+            [Op.or]: [
+                { createdAt: { [Op.gt]: lastSincro } },
+                { updatedAt: { [Op.gt]: lastSincro } }
+            ]
+        }
+    } else {
+        where = {
+            idDistrib: idUsuario,
+            estado: true
+        }
+    }
     const Servicio = require('../models/servicio.model');
 
     let servicios = await Servicio.findAll({
         attributes: ['id', 'nombre', 'precio', 'duracion', 'estado', 'idDistrib'],
-        where: {
-            [Op.or]: [
-                { createdAt: { [Op.gt]: lastSincro } },
-                { updatedAt: { [Op.gt]: lastSincro } }
-            ],
-            idDistrib: idUsuario,
-        }
+        where: where
     });
 
     if (!servicios.length) {
@@ -159,7 +168,7 @@ const obtenerHorariosConfig = async (req, res) => {
     let idUsuario = req.auth.data.idUsuario;
 
     validator = new Validator(req.query, {
-        lastSincro: 'required|date',
+        lastSincro: 'date',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `lastSincro faltante`);
@@ -167,19 +176,28 @@ const obtenerHorariosConfig = async (req, res) => {
     }
 
     let lastSincro = req.query.lastSincro;
+    var where = {};
+    if (lastSincro != null) {
+        where = {
+            idDistrib: idUsuario,
+            [Op.or]: [
+                { createdAt: { [Op.gt]: lastSincro } },
+                { updatedAt: { [Op.gt]: lastSincro } }
+            ]
+        }
+    } else {
+        where = {
+            idDistrib: idUsuario,
+            estado: true
+        }
+    }
     const HorarioConfig = require('../models/horario.config.model');
 
     let horarioConfigs = await HorarioConfig.findAll({
         attributes: ['id', 'lunes', 'martes', 'miercoles', 'jueves',
             'viernes', 'sabado', 'domingo', 'horaIni', 'minIni', 'horaFin',
             'minFin', 'nroAtenciones', 'estado', 'idDistrib', 'idLocal'],
-        where: {
-            [Op.or]: [
-                { createdAt: { [Op.gt]: lastSincro } },
-                { updatedAt: { [Op.gt]: lastSincro } }
-            ],
-            idDistrib: idUsuario,
-        }
+        where: where
     });
 
     if (!horarioConfigs.length) {
@@ -398,7 +416,7 @@ const obtenerReservas = async (req, res) => {
     const Direccion = require('../models/direccion.model');
     try {
         const reservas = await Reserva.findAll({
-            attributes: ['id', 'fecha', 'horaIni', 'duracionTotal'],
+            attributes: ['id', 'fecha', 'horaIni', 'duracionTotal','estadoAtencion'],
             include: [
                 {
                     model: Servicio,
@@ -468,7 +486,8 @@ const editarReserva = async (req, res) => {
     }
     validator = new Validator(req.body, {
         'servicios.*.id': 'required|integer',
-        'servicios.*.ReservaServicios.estado': 'required|integer'
+        'servicios.*.ReservaServicios.estado': 'required|integer',
+        estadoAtencion: 'required|integer',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `Faltan datos`);
@@ -477,6 +496,7 @@ const editarReserva = async (req, res) => {
 
     const idReserva = req.params.idReserva;
     let servicios = req.body.servicios;
+    let estadoAtencion = req.body.estadoAtencion;
     let reservaServicios = [];
     servicios.forEach(e => {
         reservaServicios.push({
@@ -487,7 +507,13 @@ const editarReserva = async (req, res) => {
     });
 
     try {
+        const Reserva = require('../models/reserva.model');
         const ReservaServicios = require('../models/reserva.servicios.model');
+        await Reserva.update({ estadoAtencion: estadoAtencion }, {
+            where: {
+                id: idReserva
+            }
+        });
         reservaServicios.forEach(async (e) => {
             await ReservaServicios.update({ estado: e.estado }, {
                 where: {

@@ -5,6 +5,10 @@ const dbConfig = {
     DB: process.env.DB_NAME,
     port: process.env.DB_PORT,
     dialect: "mysql",
+    dialectOptions: {
+        useUTC: false, // for reading from database
+    },
+    timezone: '-05:00', // for writing to database
     pool: {
         max: 10,
         min: 0,
