@@ -25,11 +25,7 @@ const obtenerLocales = async (req, res) => {
 
     logger.info(`${req.method} ${req.originalUrl}, obteniendo locales en el area`);
 
-    const usuCli = await verificarCliente(req, res);
-    if (!usuCli) {
-        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
-        return;
-    }
+    const idCli = req.auth.data.idUsuario;
 
     validator = new Validator(req.query, {
         latNE: 'required|numeric',
@@ -69,7 +65,7 @@ const obtenerLocales = async (req, res) => {
         }, {
             model: Favorito,
             attributes: ['id', 'idCliente', 'idLocal', 'estado'],
-            where: { estado: true },
+            where: { estado: true, idCliente: idCli },
             required: false,
         }, {
             model: HorarioConfig,
