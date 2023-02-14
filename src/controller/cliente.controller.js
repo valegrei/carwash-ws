@@ -289,7 +289,7 @@ const obtenerReservas = async (req, res) => {
                 {
                     model: Direccion,
                     as: 'Local',
-                    attributes: ['id', 'direccion'],
+                    attributes: ['id', 'direccion','latitud','longitud'],
                     include: [
                         {
                             model: Favorito,
@@ -302,7 +302,7 @@ const obtenerReservas = async (req, res) => {
                 {
                     model: Usuario,
                     as: 'distrib',
-                    attributes: ['id', 'razonSocial'],
+                    attributes: ['id', 'razonSocial','nroCel1', 'nroCel2'],
                 },
             ],
             where: {
