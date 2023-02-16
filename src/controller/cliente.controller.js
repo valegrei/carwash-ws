@@ -59,7 +59,7 @@ const obtenerLocales = async (req, res) => {
                 },
             },
             where: {
-                estado: true,
+                estado: 1,
                 idTipoUsuario: 3,   //distribuidores
             },
         }, {
@@ -299,6 +299,9 @@ const obtenerReservas = async (req, res) => {
                     model: Usuario,
                     as: 'distrib',
                     attributes: ['id', 'razonSocial','nroCel1', 'nroCel2'],
+                    where:{
+                        estado: 1
+                    }
                 },
             ],
             where: {
@@ -403,7 +406,7 @@ const obtenerLocalesFavoritos = async (req, res) => {
                 attributes: ['id', 'nombre', 'precio', 'duracion'],
                 model: Servicio,
                 where: {
-                    estado: true,
+                    estado: 1,
                 },
             },
             where: {
