@@ -393,21 +393,28 @@ const obtenerReservas = async (req, res) => {
     //Validamos
     let validator = new Validator(req.query, {
         fecha: 'date',
+        fechaFin: 'date',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `formato de fecha erroneo`);
         return;
     }
 
-    const whereHorario = {};
+    let whereHorario = {};
 
     if (!req.query.fecha) {
         let fecha = (new Date()).toLocaleDateString("fr-CA");
-        whereHorario.fecha = { [Op.gte]: fecha };
+        whereHorario = {fecha : { [Op.gte]: fecha }};
     } else {
-        whereHorario.fecha = req.query.fecha;
+        whereHorario = {
+            [Op.and] : [
+                {fecha : { [Op.gte]: req.query.fecha }},
+                {fecha : { [Op.lte]: req.query.fechaFin }},
+            ],
+        };
     }
     whereHorario.idDistrib = usuDis.id;
+    whereHorario.estado = true;
 
     const Reserva = require('../models/reserva.model');
     const Servicio = require('../models/servicio.model');
@@ -439,11 +446,7 @@ const obtenerReservas = async (req, res) => {
                     attributes: ['id', 'direccion'],
                 },
             ],
-            where: {
-                estado: true,
-                idDistrib: usuDis.id,
-                fecha: whereHorario.fecha,
-            },
+            where: whereHorario,
             order: [
                 ['fecha', 'ASC'],
                 ['fechaHora', 'ASC'],

@@ -702,20 +702,32 @@ const obtenerReservas = async (req, res) => {
     //Validamos
     let validator = new Validator(req.query, {
         fecha: 'date',
+        fechaFin: 'date',
+        filtroDis: 'string',
+        filtroCli: 'string',
     });
     if (validator.fails()) {
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `formato de fecha erroneo`);
         return;
     }
 
-    const whereHorario = {};
+    let whereHorario = {};
 
     if (!req.query.fecha) {
         let fecha = (new Date()).toLocaleDateString("fr-CA");
-        whereHorario.fecha = { [Op.gte]: fecha };
+        whereHorario = {fecha : { [Op.gte]: fecha }};
     } else {
-        whereHorario.fecha = req.query.fecha;
+        whereHorario = {
+            [Op.and] : [
+                {fecha : { [Op.gte]: req.query.fecha }},
+                {fecha : { [Op.lte]: req.query.fechaFin }},
+            ],
+        };
     }
+    whereHorario.estado = true;
+
+    const filtroDis = req.query.filtroDis != null ? req.query.filtroDis : "";
+    const filtroCli = req.query.filtroCli != null ? req.query.filtroCli : "";
 
     const Reserva = require('../models/reserva.model');
     const Servicio = require('../models/servicio.model');
@@ -743,6 +755,7 @@ const obtenerReservas = async (req, res) => {
                         , 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2'],
                     where: {
                         estado: 1,
+                        nroDocumento: {[Op.startsWith]: filtroCli},
                     }
                 }, {
                     model: Direccion,
@@ -755,13 +768,11 @@ const obtenerReservas = async (req, res) => {
                     attributes: ['id', 'razonSocial', 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2'],
                     where: {
                         estado: 1,
-                    }
+                        nroDocumento: {[Op.startsWith]: filtroDis},
+                    },
                 },
             ],
-            where: {
-                estado: true,
-                fecha: whereHorario.fecha,
-            },
+            where: whereHorario,
             order: [
                 ['fecha', 'ASC'],
                 ['fechaHora', 'ASC'],
