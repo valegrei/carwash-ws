@@ -59,6 +59,6 @@ adminRoutes.route('/anuncios')
     .delete(eliminarAnuncio);
 
 adminRoutes.route('/anuncios/:id')
-    .put(actualizarAnuncio);
+    .put(upload.single('imagen'), actualizarAnuncio);
 
 module.exports = adminRoutes;

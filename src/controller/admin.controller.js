@@ -551,6 +551,7 @@ const actualizarAnuncio = async (req, res) => {
         id: 'required|integer',
     });
     if (validator.fails()) {
+        eliminarFotoTmp(req.file);
         response(res, HttpStatus.UNPROCESABLE_ENTITY, `Falta id de anuncio`);
         return;
     }
@@ -567,15 +568,19 @@ const actualizarAnuncio = async (req, res) => {
     }
 
     const idAnuncio = req.params.id;
+
     const data = {
         descripcion: req.body.descripcion,
         url: req.body.url,
         mostrar: req.body.mostrar,
     };
+    if(req.file!=null){
+        data.path = pathStr + req.file.filename;
+    }
     try {
         const Anuncio = require('../models/anuncio.model');
-
         await Anuncio.update(data, { where: { id: idAnuncio } });
+        await moverImagen(req.file);
         response(res, HttpStatus.OK, `Anuncio actualizado`);
     } catch (error) {
         response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al actualizar anuncio`);
