@@ -278,7 +278,7 @@ const getUsuarios = async (req, res) => {
     } else {
         where = {
             estado: {
-                [Op.gt] : 0
+                [Op.gt]: 0
             }
         }
     }
@@ -574,7 +574,7 @@ const actualizarAnuncio = async (req, res) => {
         url: req.body.url,
         mostrar: req.body.mostrar,
     };
-    if(req.file!=null){
+    if (req.file != null) {
         data.path = pathStr + req.file.filename;
     }
     try {
@@ -688,6 +688,164 @@ const cambiarPassword = async (req, res) => {
 
 };
 
+
+const obtenerReservas = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, obteniendo reservas`);
+
+    const usuAdmin = await verificarAdmin(req, res);
+    if (!usuAdmin) {
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
+
+    //Validamos
+    let validator = new Validator(req.query, {
+        fecha: 'date',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `formato de fecha erroneo`);
+        return;
+    }
+
+    const whereHorario = {};
+
+    if (!req.query.fecha) {
+        let fecha = (new Date()).toLocaleDateString("fr-CA");
+        whereHorario.fecha = { [Op.gte]: fecha };
+    } else {
+        whereHorario.fecha = req.query.fecha;
+    }
+
+    const Reserva = require('../models/reserva.model');
+    const Servicio = require('../models/servicio.model');
+    const Vehiculo = require('../models/vehiculo.model');
+    const { Usuario } = require('../models/usuario.model');
+    const Direccion = require('../models/direccion.model');
+    try {
+        const reservas = await Reserva.findAll({
+            attributes: ['id', 'fecha', 'horaIni', 'duracionTotal', 'estadoAtencion'],
+            include: [
+                {
+                    model: Servicio,
+                    attributes: ['id', 'nombre'],
+                    through: {
+                        attributes: ['precio', 'duracion', 'estado']
+                    }
+                },
+                {
+                    model: Vehiculo,
+                    attributes: ['id', 'marca', 'modelo', 'year', 'placa']
+                }, {
+                    model: Usuario,
+                    as: "cliente",
+                    attributes: ['id', 'correo', 'nombres', 'apellidoPaterno', 'apellidoMaterno'
+                        , 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2'],
+                    where: {
+                        estado: 1,
+                    }
+                }, {
+                    model: Direccion,
+                    as: 'Local',
+                    attributes: ['id', 'direccion'],
+                },
+                {
+                    model: Usuario,
+                    as: 'distrib',
+                    attributes: ['id', 'razonSocial', 'nroDocumento', 'idTipoDocumento', 'nroCel1', 'nroCel2'],
+                    where: {
+                        estado: 1,
+                    }
+                },
+            ],
+            where: {
+                estado: true,
+                fecha: whereHorario.fecha,
+            },
+            order: [
+                ['fecha', 'ASC'],
+                ['fechaHora', 'ASC'],
+            ]
+        })
+
+        if (!reservas.length) {
+            //vacio
+            response(res, HttpStatus.NOT_FOUND, `No hay reservas.`);
+            return;
+        } else {
+            response(res, HttpStatus.OK, `Reservas encontrados`, { reservas: reservas });
+            return;
+        }
+    } catch (error) {
+        logger.error(error);
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al buscar reservas`);
+        return;
+    }
+};
+
+
+const editarReserva = async (req, res) => {
+
+    logger.info(`${req.method} ${req.originalUrl}, Creando reserva`);
+
+    const usuAdmin = await verificarAdmin(req, res);
+    if (!usuAdmin) {
+        response(res, HttpStatus.UNAUTHORIZED, "No tiene permiso para esta operación");
+        return;
+    }
+
+    //Validamos
+    let validator = new Validator(req.params, {
+        idReserva: 'required|integer',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `id faltante`);
+        return;
+    }
+    validator = new Validator(req.body, {
+        'servicios.*.id': 'required|integer',
+        'servicios.*.ReservaServicios.estado': 'required|integer',
+        estadoAtencion: 'required|integer',
+    });
+    if (validator.fails()) {
+        response(res, HttpStatus.UNPROCESABLE_ENTITY, `Faltan datos`);
+        return;
+    }
+
+    const idReserva = req.params.idReserva;
+    let servicios = req.body.servicios;
+    let estadoAtencion = req.body.estadoAtencion;
+    let reservaServicios = [];
+    servicios.forEach(e => {
+        reservaServicios.push({
+            ReservaId: idReserva,
+            ServicioId: e.id,
+            estado: e.ReservaServicios.estado,
+        });
+    });
+
+    try {
+        const Reserva = require('../models/reserva.model');
+        const ReservaServicios = require('../models/reserva.servicios.model');
+        await Reserva.update({ estadoAtencion: estadoAtencion }, {
+            where: {
+                id: idReserva
+            }
+        });
+        reservaServicios.forEach(async (e) => {
+            await ReservaServicios.update({ estado: e.estado }, {
+                where: {
+                    ReservaId: e.ReservaId,
+                    ServicioId: e.ServicioId,
+                }
+            });
+        });
+        response(res, HttpStatus.OK, `Reserva guardada`);
+    } catch (error) {
+        response(res, HttpStatus.INTERNAL_SERVER_ERROR, `Error al guardar reserva`);
+    }
+};
+
 module.exports = {
     getUsuarios,
     modificarUsuario,
@@ -702,4 +860,6 @@ module.exports = {
     actualizarParametrosSMTP,
     probarCorreo,
     cambiarPassword,
+    obtenerReservas,
+    editarReserva,
 };

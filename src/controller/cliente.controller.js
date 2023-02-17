@@ -298,7 +298,7 @@ const obtenerReservas = async (req, res) => {
                 {
                     model: Usuario,
                     as: 'distrib',
-                    attributes: ['id', 'razonSocial','nroCel1', 'nroCel2'],
+                    attributes: ['id', 'razonSocial', 'nroDocumento', 'idTipoDocumento','nroCel1', 'nroCel2'],
                     where:{
                         estado: 1
                     }

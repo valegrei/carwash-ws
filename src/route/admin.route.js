@@ -13,6 +13,8 @@ const {
     actualizarParametrosSMTP,
     probarCorreo,
     cambiarPassword,
+    obtenerReservas,
+    editarReserva,
 } = require('../controller/admin.controller');
 const multer = require('multer');
 const uuid4 = require('uuid4');
@@ -60,5 +62,11 @@ adminRoutes.route('/anuncios')
 
 adminRoutes.route('/anuncios/:id')
     .put(upload.single('imagen'), actualizarAnuncio);
+
+adminRoutes.route('/reserva')
+    .get(obtenerReservas);
+
+adminRoutes.route('/reserva/:idReserva')
+    .put(editarReserva);
 
 module.exports = adminRoutes;
