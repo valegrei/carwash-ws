@@ -44,8 +44,8 @@ db.sequelize.sync().then(()=>{ //sync({ force: true }) "Drop and re-sync db."
 
 //Job para generar horarios cada mes
 generarHorariosTask.start();
-//Parche
-generarTodosHorarios();
+//Descomentar si no se han generado horarios en el job
+//generarTodosHorarios();
 
 //Jwt middleware
 app.use('/api',jwtMiddleware);
