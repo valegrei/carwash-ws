@@ -14,7 +14,7 @@ const db = require('./models');
 const initData = require('./models/init.data');
 const jwtMiddleware = require('./middleware/jwt.middleware');
 const fs = require('fs-extra');
-const {generarHorariosTask} = require('./util/scheduler');
+const {generarHorariosTask,generarTodosHorarios} = require('./util/scheduler');
 
 //Crea directorios para guardar archivos
 fs.ensureDir('temp_uploads/',(err) =>{
@@ -44,6 +44,8 @@ db.sequelize.sync().then(()=>{ //sync({ force: true }) "Drop and re-sync db."
 
 //Job para generar horarios cada mes
 generarHorariosTask.start();
+//Parche
+generarTodosHorarios();
 
 //Jwt middleware
 app.use('/api',jwtMiddleware);

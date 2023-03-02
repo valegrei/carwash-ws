@@ -4,23 +4,41 @@ const { Op } = require('sequelize');
 const logger = require('./logger');
 const cron = require('node-cron');
 
-const generarHorariosTask = cron.schedule('0 1 25 * *', () => {
-    logger.info('Ejecutando el 25 a las 01:00 at America/Lima timezone');
+const generarHorariosTask = cron.schedule('0 1 20 * *', () => {
+    logger.info('Ejecutando el 20 a las 01:00 at America/Lima timezone');
     generarTodosHorariosSiguienteMes();
 }, {
     scheduled: true,
     timezone: "America/Lima"
 });
 
+const generarTodosHorarios = async () => {
+    const horarioConfigs = await HorarioConfig.findAll({
+        where: { estado: true }
+    });
+    if (!horarioConfigs) {
+        //logger.info("No hay horarios");
+        return; //Vacio
+    }
+    horarioConfigs.forEach(async (e) => {
+        try {
+            //logger.info("Se configura un horario");
+            await generarParaEsteMesOSiguiente(e);
+        } catch (error) { logger.error(error) }
+    });
+}
+
 const generarTodosHorariosSiguienteMes = async () => {
     const horarioConfigs = await HorarioConfig.findAll({
         where: { estado: true }
     });
     if (!horarioConfigs) {
+        //logger.info("No hay horarios");
         return; //Vacio
     }
     horarioConfigs.forEach(async (e) => {
         try {
+            //logger.info("Se configura un horario");
             await generarParaSiguienteMes(e);
         } catch (error) { logger.error(error) }
     });
@@ -29,7 +47,7 @@ const generarTodosHorariosSiguienteMes = async () => {
 const generarParaEsteMesOSiguiente = async (horarioConfig) => {
     const fechaHoy = new Date();
     const fechaInicio = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth(), fechaHoy.getDate())
-    if (fechaHoy.getDate() < 25) {
+    if (fechaHoy.getDate() < 20) {
         //Se crea solo para ese mes
         const ultimoDiaEsteMes = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth() + 1, 0)
         await generarHorariosPorFecha(horarioConfig, fechaInicio, ultimoDiaEsteMes);
@@ -42,8 +60,9 @@ const generarParaEsteMesOSiguiente = async (horarioConfig) => {
 
 const generarParaSiguienteMes = async (horarioConfig) => {
     const fechaHoy = new Date();
-    const primerDiaSiguienteMes = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth() + 2, 1)
+    const primerDiaSiguienteMes = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth() + 1, 1)
     const ultimoDiaSiguienteMes = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth() + 2, 0)
+    //logger.info(primerDiaSiguienteMes.toString()+" "+ultimoDiaSiguienteMes.toString());
     await generarHorariosPorFecha(horarioConfig, primerDiaSiguienteMes, ultimoDiaSiguienteMes);
 };
 
@@ -124,4 +143,5 @@ module.exports = {
     eliminarHorarios,
     modificarHorarios,
     generarHorariosTask,
+    generarTodosHorarios,
 }
