@@ -29,7 +29,7 @@ const initData = async () => {
         {clave: 'EMAIL_PORT', idTipo: 1, valor: '465'},
         {clave: 'EMAIL_SSL_TLS', idTipo: 1, valor: '1'},
         {clave: 'EMAIL_ADDR', idTipo: 1, valor: 'carwashperuapp@gmail.com'},
-        {clave: 'EMAIL_PASS', idTipo: 1, valor: 'buitsphcuodcycjj'},
+        {clave: 'EMAIL_PASS', idTipo: 1, valor: 'joltfaqbqsfgnqgc'},
     ],{
         ignoreDuplicates: true
     });
