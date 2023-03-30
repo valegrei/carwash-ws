@@ -123,10 +123,10 @@ const signUp = async (req, res) => {
         if(idTipoUsuario == 3){ // Verificando(2)
             //Notifico a usuario distribuidor su registro
             const mensajeDis = contentNotifDistribRegistrado(razonSocial, nroDocumento);
-            enviarCorreo(correo, mensajeDis.subject, mensajeDis.body);
+            enviarCorreo(correo, mensajeDis);
             //Notifico a administradores la verificacion y aprobacion del nuevo registro
             const mensajeAdm = contentNotifAdminDistribRegistrado(correo, razonSocial, nroDocumento);
-            enviarCorreoAdmins(mensajeAdm.subject, mensajeAdm.body);
+            enviarCorreoAdmins(mensajeAdm);
 
             response(res,HttpStatus.OK,`Activación de distribuidor pendiente`,{ usuario: nuevoUsuario});
             return;
@@ -152,7 +152,7 @@ const generarCodigoVerificacion = async (usuario)=>{
         await usuario.setCodigoVerificacion(codVerif);
         let {correo} = usuario;
         const content = contentVerificacion(codigo);
-        enviarCorreo(correo, content.subject, content.body);
+        enviarCorreo(correo, content);
     }catch(error){
         logger.error(error);
     }
@@ -273,7 +273,7 @@ const solicitarCodigoNuevaClave = async (req, res) => {
         await usuario.setCodigoRenuevaClave(codigoRenCla);
 
         const content = contentNuevaClave(codigo);
-        enviarCorreo(correo, content.subject, content.body);
+        enviarCorreo(correo, content);
         
         response(res,HttpStatus.OK,'Se envió código para renovar clave.');
     }

@@ -234,7 +234,7 @@ const probarCorreo = async (req, res) => {
     try {
         const { correo } = adminUsu;
         const content = contentTest();
-        enviarCorreo(correo, content.subject, content.body)
+        enviarCorreo(correo, content)
 
         response(res, HttpStatus.OK, `Se envio correo de prueba`);
     } catch (error) {
@@ -364,7 +364,7 @@ const modificarUsuario = async (req, res) => {
         if (oldEstado == 2 && usuario.estado == 1) {
             //Si se activa distribuidor
             const content = contentNotifDistribActivado(usuario.razonSocial, usuario.nroDocumento);
-            enviarCorreo(usuario.correo, content.subject, content.body);
+            enviarCorreo(usuario.correo, content);
         }
 
         response(res, HttpStatus.OK, `Usuario modificado`);
@@ -430,7 +430,7 @@ const agregarAdmin = async (req, res) => {
 
         if (usuAdmin) {
             const content = contentNotifAdminRegistrado(usuAdmin.correo, clave);
-            enviarCorreo(usuAdmin.correo, content.subject, content.body);
+            enviarCorreo(usuAdmin.correo, content);
 
             response(res, HttpStatus.OK, `Administrador registrado`);
         } else {

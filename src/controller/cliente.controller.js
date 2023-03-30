@@ -4,6 +4,7 @@ const HttpStatus = require('../util/http.status');
 const Validator = require('validatorjs');
 const { Op } = require('sequelize');
 const fs = require('fs-extra');
+const { notificarNuevaReserva } = require('../util/mail');
 const uploadFolder = 'uploads/images/vehiculos/';
 const pathStr = '/files/images/vehiculos/';
 
@@ -221,6 +222,7 @@ const crearReserva = async (req, res) => {
             await t.rollback();
         }
         await t.commit();
+        notificarNuevaReserva(reserva.id);
         response(res, HttpStatus.OK, `Reserva guardada: ${reserva.id}`);
     } catch (error) {
         logger.error(error)
