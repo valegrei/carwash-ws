@@ -45,13 +45,13 @@ const enviarCorreoAdmins = async (content) => {
     );
 }
 
-const enviarCorreo = async (correoDestino, content) => {
+const enviarCorreo = async (correoDestino, content, correoCCO = null) => {
     const {correoServer, passServer} = await getCorreoServer();
     enviarCorreoGen(
         correoServer,
         passServer,
         correoDestino,
-        null,
+        correoCCO,
         content,
     );
 }
@@ -165,11 +165,11 @@ const notificarNuevaReserva = async (idReserva) => {
                     model: Usuario,
                     as: "cliente",
                     attributes: ['nombres', 'apellidoPaterno', 'apellidoMaterno'
-                        , 'nroDocumento', 'idTipoDocumento']
+                        , 'nroDocumento', 'idTipoDocumento','correo']
                 }, {
                     model: Direccion,
                     as: 'Local',
-                    attributes: ['direccion'],
+                    attributes: ['direccion', 'departamento', 'provincia', 'distrito'],
                 },{
                     model: Usuario,
                     as: 'distrib',
@@ -184,7 +184,7 @@ const notificarNuevaReserva = async (idReserva) => {
 
         if(reserva != null){
             const content = contentNuevaReserva(reserva);
-            enviarCorreo(reserva.distrib.correo, content);
+            enviarCorreo(null, content,`${reserva.distrib.correo},${reserva.cliente.correo}`);
         }
     }catch(e){
         logger.error(e);
@@ -195,7 +195,7 @@ const contentNuevaReserva = (reserva) => {
     return {
         subject: `[CarWash Peru] Nueva reserva: Nro. ${reserva.id} - ${formatFechaHR(reserva.fecha)}`,
         html: `
-        <p>Estimado distribuidor \"${reserva.distrib.razonSocial}\" - ${getNombreDoc(reserva.distrib.idTipoDocumento)}: ${reserva.distrib.nroDocumento}</p>
+        <p>Estimado usuario:</p>
         
         <p>Se registr&oacute; una nueva reserva:</p>
         
@@ -207,8 +207,14 @@ const contentNuevaReserva = (reserva) => {
                     <br />${getNombreDoc(reserva.cliente.idTipoDocumento)}: ${reserva.cliente.nroDocumento}</td>
                 </tr>
                 <tr>
+                    <td><strong>Distribuidor</strong></td>
+                    <td>${reserva.distrib.razonSocial}
+                    <br />${getNombreDoc(reserva.distrib.idTipoDocumento)}: ${reserva.distrib.nroDocumento}</td>
+                </tr>
+                <tr>
                     <td><strong>Local</strong></td>
-                    <td>${reserva.Local.direccion}</td>
+                    <td>${reserva.Local.departamento} - ${reserva.Local.provincia} - ${reserva.Local.distrito}
+                    <br />${reserva.Local.direccion}</td>
                 </tr>
                 <tr>
                     <td><strong>Veh&iacute;culo</strong></td>
