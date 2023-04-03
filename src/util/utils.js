@@ -53,4 +53,12 @@ const concatenarServicios = (servicios) => {
     return res;
 }
 
-module.exports = { sha256, generarCodigo, formatFechaDB, getNombreDoc, formatFechaHR, concatenarServicios, formatHorario };
+const concatenarServiciosWhat = (servicios) => {
+    let res = "";
+    servicios.forEach(serv => {
+        res = res + `- ${serv.nombre}\n`;
+    });
+    return res;
+}
+
+module.exports = { sha256, generarCodigo, formatFechaDB, getNombreDoc, formatFechaHR, concatenarServicios, formatHorario,concatenarServiciosWhat };

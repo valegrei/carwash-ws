@@ -3,8 +3,9 @@ const logger = require('../util/logger');
 const HttpStatus = require('../util/http.status');
 const Validator = require('validatorjs');
 const { Op } = require('sequelize');
+const {contentNuevaReserva, enviarCorreo} = require('../util/mail');
 const fs = require('fs-extra');
-const { notificarNuevaReserva } = require('../util/mail');
+const { enviarMensajeWhatsapp, mensajeNuevaReserva } = require('../util/whatsapp');
 const uploadFolder = 'uploads/images/vehiculos/';
 const pathStr = '/files/images/vehiculos/';
 
@@ -725,6 +726,58 @@ const moverImagen = async (file) => {
         return null;
     }
 };
+
+
+const notificarNuevaReserva = async (idReserva) => {
+    const Reserva = require('../models/reserva.model');
+    const Servicio = require('../models/servicio.model');
+    const Vehiculo = require('../models/vehiculo.model');
+    const { Usuario } = require('../models/usuario.model');
+    const Direccion = require('../models/direccion.model');
+    
+    try{
+        const reserva = await Reserva.findOne({
+            attributes: ['id', 'fecha', 'horaIni', 'duracionTotal'],
+            include: [
+                {
+                    model: Servicio,
+                    attributes: ['nombre'],
+                },
+                {
+                    model: Vehiculo,
+                    attributes: ['marca', 'modelo', 'year', 'placa']
+                }, {
+                    model: Usuario,
+                    as: "cliente",
+                    attributes: ['nombres', 'apellidoPaterno', 'apellidoMaterno'
+                        , 'nroDocumento', 'idTipoDocumento','correo','nroCel2']
+                }, {
+                    model: Direccion,
+                    as: 'Local',
+                    attributes: ['direccion', 'departamento', 'provincia', 'distrito'],
+                },{
+                    model: Usuario,
+                    as: 'distrib',
+                    attributes: ['razonSocial', 'correo','idTipoDocumento','nroDocumento','nroCel2'],
+                    where:{
+                        estado: 1
+                    }
+                },
+            ],
+            where: {id: idReserva},
+        });
+
+        if(reserva != null){
+            const content = contentNuevaReserva(reserva);
+            const msgWhats = mensajeNuevaReserva(reserva);
+            enviarCorreo(null, content,`${reserva.distrib.correo},${reserva.cliente.correo}`);
+            enviarMensajeWhatsapp(reserva.distrib.nroCel2, msgWhats);
+            enviarMensajeWhatsapp(reserva.cliente.nroCel2, msgWhats);
+        }
+    }catch(e){
+        logger.error(e);
+    }
+}
 
 module.exports = {
     obtenerVehiculos,

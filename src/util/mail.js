@@ -143,54 +143,6 @@ const contentNuevaClave = (codigo) => {
     };
 };
 
-const notificarNuevaReserva = async (idReserva) => {
-    const Reserva = require('../models/reserva.model');
-    const Servicio = require('../models/servicio.model');
-    const Vehiculo = require('../models/vehiculo.model');
-    const { Usuario } = require('../models/usuario.model');
-    const Direccion = require('../models/direccion.model');
-    
-    try{
-        const reserva = await Reserva.findOne({
-            attributes: ['id', 'fecha', 'horaIni', 'duracionTotal'],
-            include: [
-                {
-                    model: Servicio,
-                    attributes: ['nombre'],
-                },
-                {
-                    model: Vehiculo,
-                    attributes: ['marca', 'modelo', 'year', 'placa']
-                }, {
-                    model: Usuario,
-                    as: "cliente",
-                    attributes: ['nombres', 'apellidoPaterno', 'apellidoMaterno'
-                        , 'nroDocumento', 'idTipoDocumento','correo']
-                }, {
-                    model: Direccion,
-                    as: 'Local',
-                    attributes: ['direccion', 'departamento', 'provincia', 'distrito'],
-                },{
-                    model: Usuario,
-                    as: 'distrib',
-                    attributes: ['razonSocial', 'correo','idTipoDocumento','nroDocumento'],
-                    where:{
-                        estado: 1
-                    }
-                },
-            ],
-            where: {id: idReserva},
-        });
-
-        if(reserva != null){
-            const content = contentNuevaReserva(reserva);
-            enviarCorreo(null, content,`${reserva.distrib.correo},${reserva.cliente.correo}`);
-        }
-    }catch(e){
-        logger.error(e);
-    }
-}
-
 const contentNuevaReserva = (reserva) => {
     return {
         subject: `[CarWash Peru] Nueva reserva: Nro. ${reserva.id} - ${formatFechaHR(reserva.fecha)}`,
@@ -257,5 +209,5 @@ module.exports = {
     contentNotifAdminRegistrado,
     verifyConfig,
     contentTest,
-    notificarNuevaReserva,
+    contentNuevaReserva,
 };
