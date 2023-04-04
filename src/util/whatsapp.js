@@ -25,8 +25,50 @@ ${concatenarServiciosWhat(reserva.Servicios)}
 `
 };
 
+const mensajeNotifDistribActivado = (razSocial, ruc) => {
+    return  `[CarWash Peru] Registro de distribuidor (${ruc}) aprobado
+
+Estimado usuario:
+Se aprobó el registro como distribuidor a:
+
+*Raz. Social:* ${razSocial}
+*Nro. de RUC:* ${ruc}
+
+Ya puede iniciar sesión con su correo y contraseña.`;
+};
+
+const mensajeNotifDistribRegistrado = (razSocial, ruc) => {
+    return `[CarWash Peru] Registro de distribuidor (${ruc}) pendiente a aprobacion
+
+Estimado usuario:
+Se registró como distribuidor a:
+
+*Raz. Social:* ${razSocial}
+*Nro. de RUC:* ${ruc}
+
+Está pendiente su aprobación por el administrador.
+Se le notificará por este medio las novedades de su registro.`;
+}
+
+const mensajeNotifAdminDistribRegistrado = (correo,razSocial, ruc) => {
+    return `[CarWash Peru] Se registró distribuidor (${ruc}), pendiente aprobación
+
+Estimado administrador:
+Se registró como distribuidor a:
+
+*Raz. Social:* ${razSocial}
+*Nro. de RUC:* ${ruc}
+*Correo:* ${correo}
+
+Está pendiente su aprobación o rechazo previa verificación.
+Acceda a la aplicación para para revisarlo.`
+};
+
 const enviarMensajeWhatsapp = async (destino, msg) => {
     try {
+        if(destino==null || destino.length == 0){
+            return;
+        }
         //verifica si el destino contiene 51
         destino = destino.replace(/[\s+-]/, '');
         if (!destino.startsWith('51')) {
@@ -80,6 +122,29 @@ const enviarMensajeWhatsapp = async (destino, msg) => {
     }
 }
 
+const enviarMensajeAdmins = async (mensaje) => {
+    const nrosAdmin = await getNroAdmins();
+
+    nrosAdmin.forEach(nroAdmin => {
+        enviarMensajeWhatsapp(nroAdmin, mensaje);
+    });
+}
+
+const getNroAdmins = async () => {
+    const {Usuario} = require('../models/usuario.model');
+    const admins = await Usuario.findAll({
+        attributes: ['nroCel2'],
+        where: {idTipoUsuario: 1, estado: 1}    //Admin, Activo(1)
+    });
+    const nrosAdmin = admins.map(e => e.correo);
+    return nrosAdmin;
+};
+
 module.exports = {
-    enviarMensajeWhatsapp, mensajeNuevaReserva
+    enviarMensajeWhatsapp, 
+    mensajeNuevaReserva,
+    mensajeNotifDistribActivado,
+    mensajeNotifDistribRegistrado,
+    mensajeNotifAdminDistribRegistrado,
+    enviarMensajeAdmins,
 };

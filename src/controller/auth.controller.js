@@ -12,6 +12,13 @@ const {
     contentNotifAdminDistribRegistrado, 
     contentNotifDistribRegistrado
 } = require('../util/mail');
+const {
+    enviarMensajeWhatsapp,
+    enviarMensajeAdmins,
+    mensajeNotifAdminDistribRegistrado,
+    mensajeNotifDistribRegistrado,
+} = require('../util/whatsapp');
+
 const {Op} = require('sequelize');
 const MINUTO = 60000;   //en milisegundos
 const HORA = MINUTO*60;
@@ -117,16 +124,20 @@ const signUp = async (req, res) => {
     //Procede a insertar usuario
     Usuario.create(data)
     .then(async nuevoUsuario => {
-        let {idTipoUsuario, correo, razonSocial, nroDocumento} = nuevoUsuario;
+        let {idTipoUsuario, correo, razonSocial, nroDocumento, nroCel2} = nuevoUsuario;
         
         //TODO: Si el tipo de usuario creado es Distribuidor, comunicar a los administradores para su activacion
         if(idTipoUsuario == 3){ // Verificando(2)
             //Notifico a usuario distribuidor su registro
             const mensajeDis = contentNotifDistribRegistrado(razonSocial, nroDocumento);
+            const mensajeDisW = mensajeNotifDistribRegistrado(razonSocial, nroDocumento);
             enviarCorreo(correo, mensajeDis);
+            enviarMensajeWhatsapp(nroCel2, mensajeDisW);
             //Notifico a administradores la verificacion y aprobacion del nuevo registro
             const mensajeAdm = contentNotifAdminDistribRegistrado(correo, razonSocial, nroDocumento);
+            const mensajeAdmW = mensajeNotifAdminDistribRegistrado(correo, razonSocial, nroDocumento);
             enviarCorreoAdmins(mensajeAdm);
+            enviarMensajeAdmins(mensajeAdmW);
 
             response(res,HttpStatus.OK,`Activación de distribuidor pendiente`,{ usuario: nuevoUsuario});
             return;

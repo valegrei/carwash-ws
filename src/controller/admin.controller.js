@@ -13,6 +13,10 @@ const {
     verifyConfig,
     contentTest,
 } = require('../util/mail');
+const {
+    enviarMensajeWhatsapp,
+    mensajeNotifDistribActivado,
+} = require('../util/whatsapp')
 const { generarCodigo, sha256 } = require('../util/utils');
 
 const verificarAdmin = async (req, res) => {
@@ -364,7 +368,9 @@ const modificarUsuario = async (req, res) => {
         if (oldEstado == 2 && usuario.estado == 1) {
             //Si se activa distribuidor
             const content = contentNotifDistribActivado(usuario.razonSocial, usuario.nroDocumento);
+            const mensaje = mensajeNotifDistribActivado(usuario.razonSocial, usuario.nroDocumento);
             enviarCorreo(usuario.correo, content);
+            enviarMensajeWhatsapp(usuario.nroCel2, mensaje);
         }
 
         response(res, HttpStatus.OK, `Usuario modificado`);
